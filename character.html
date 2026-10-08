@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>朽ち神楽 — 民俗ホラー・キャラクタープレビュー</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+  <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/examples/jsm/"}}</script>
+</head>
+<body>
+  <canvas id="stage" aria-label="朽ち神楽の3Dキャラクター"></canvas>
+  <header class="masthead">
+    <div><p class="eyebrow">山は、まだ覚えている。</p><h1>朽ち神楽</h1><p class="roman">KUCHI KAGURA <span> / CHARACTER STUDY 02</span></p></div>
+    <div class="build"><span class="live-dot"></span><span id="status" role="status">モデルを読み込み中</span></div>
+  </header>
+  <aside id="panel">
+    <div class="panel-head"><span class="section-no">01</span><h2>怪異のふるまい</h2><span class="section-en">BEHAVIOR</span></div>
+    <p class="intro">古い祭祀衣装をまとい、村をさまよう追跡者。手向けたものが、残された記憶を呼び起こす。</p>
+    <div class="states">
+      <button data-state="idle"><span>待機</span><small>IDLE</small></button>
+      <button data-state="walk"><span>巡回</span><small>WALK</small></button>
+      <button data-state="alert"><span>警戒</span><small>ALERT</small></button>
+      <button data-state="chase"><span>追跡</span><small>CHASE</small></button>
+      <button data-state="search"><span>捜索</span><small>SEARCH</small></button>
+      <button data-state="lament"><span>嘆く</span><small>LAMENT</small></button>
+      <button data-state="feed"><span>食らう</span><small>FEED</small></button>
+      <button data-state="ritual"><span>神楽</span><small>RITUAL</small></button>
+    </div>
+    <div class="behavior-note"><span id="state-title">待機</span><p id="state-description">息を潜め、わずかに揺れる。</p></div>
+    <div class="timeline"><button id="pause" aria-label="再生を一時停止">Ⅱ</button><input id="timeline" aria-label="アニメーションの時刻" type="range" min="0" max="3.6" step="0.01" value="0"><output id="time">0.0 / 3.6</output></div>
+    <div class="playback"><button id="replay">↺ 最初から</button><label>速度<select id="speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option></select></label></div>
+    <div class="panel-head secondary"><span class="section-no">02</span><h2>手向ける</h2><span class="section-en">OFFERING</span></div>
+    <div class="offering"><select id="item" aria-label="投げる品物"><option value="photograph">古い写真</option><option value="hairpin">かんざし</option><option value="child_sandals">子どもの草履</option><option value="onigiri">おにぎり</option><option value="dango">団子</option><option value="kagura_bell">神楽鈴</option></select><button id="offer">投げる ↗</button></div>
+    <p id="offering-result" aria-live="polite">記憶の品、食べ物、あるいは鈴の音。</p>
+    <div class="toggles"><label><input id="rotate" type="checkbox">回転展示</label><label><input id="fog" type="checkbox" checked>霧</label><label><input id="studio" type="checkbox">明るい照明</label></div>
+    <details><summary>アセット仕様</summary><pre id="stats">読み込み中</pre></details>
+  </aside>
+  <footer><div class="caption"><span class="red-line"></span><p>記憶を拾うもの。<br><small>日本の因習村を舞台にした、オリジナルの追跡怪異。</small></p></div><p class="controls-hint">ドラッグで回転 <span>/</span> ホイールで拡大 <button id="reset-camera">視点を戻す</button></p></footer>
+  <div id="missing" hidden role="alert"><h2>モデルを読み込めませんでした</h2><p id="load-error">先にモデルを生成してください。</p></div>
+  <script type="module" src="viewer.js"></script>
+</body>
+</html>
