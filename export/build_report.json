@@ -1,0 +1,70 @@
+{
+  "character": "朽ち神楽",
+  "blender_version": "4.3.2",
+  "triangles": 27904,
+  "skinned_meshes": 1,
+  "bones": 20,
+  "texture": {
+    "size": [
+      1024,
+      1024
+    ],
+    "count": 1,
+    "packed": true
+  },
+  "clips": [
+    {
+      "name": "idle",
+      "duration_seconds": 3.6,
+      "loop": true,
+      "in_place": true
+    },
+    {
+      "name": "walk",
+      "duration_seconds": 1.2,
+      "loop": true,
+      "in_place": true
+    },
+    {
+      "name": "alert",
+      "duration_seconds": 2.4,
+      "loop": false,
+      "in_place": true
+    },
+    {
+      "name": "chase",
+      "duration_seconds": 0.8,
+      "loop": true,
+      "in_place": true
+    },
+    {
+      "name": "search",
+      "duration_seconds": 4.8,
+      "loop": true,
+      "in_place": true
+    },
+    {
+      "name": "lament",
+      "duration_seconds": 7.2,
+      "loop": false,
+      "in_place": true
+    },
+    {
+      "name": "feed",
+      "duration_seconds": 5.2,
+      "loop": false,
+      "in_place": true
+    },
+    {
+      "name": "ritual",
+      "duration_seconds": 5.6,
+      "loop": true,
+      "in_place": true
+    }
+  ],
+  "glb_bytes": 2562092,
+  "forward_gltf": "+Z",
+  "units": "metres",
+  "player_model": false,
+  "pov_arms_asset": "separate pov_arms.glb, reserved for later"
+}

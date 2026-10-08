@@ -1,0 +1,24 @@
+{
+  "name": "kuchi-kagura-web3d",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Original Japanese folklore first-person horror game, character generator and animation preview",
+  "scripts": {
+    "build": "blender --background --factory-startup --threads 4 --python-exit-code 1 --python blender/generate_kuchikagura.py",
+    "preview": "python3 tools/serve_preview.py",
+    "validate": "python3 tools/validate_asset.py && node tools/validate_gltf.cjs",
+    "test:browser": "python3 tools/smoke_preview.py",
+    "start": "python3 tools/serve_preview.py",
+    "test:game": "python3 tools/smoke_game.py",
+    "test:logic": "node --test tests/gameplay.test.mjs",
+    "build:web": "python3 tools/build_web.py",
+    "test:static": "python3 tools/smoke_static.py"
+  },
+  "dependencies": {
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "gltf-validator": "2.0.0-dev.3.10"
+  },
+  "type": "module"
+}

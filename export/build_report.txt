@@ -1,0 +1,5 @@
+KUCHI KAGURA
+triangles=27904
+bones=20
+texture=1x1024
+animations=idle,walk,alert,chase,search,lament,feed,ritual

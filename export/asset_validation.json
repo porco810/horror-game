@@ -1,0 +1,19 @@
+{
+  "status": "passed",
+  "triangles": 27904,
+  "glb_bytes": 2562092,
+  "bones": 20,
+  "texture": "one embedded 1024x1024 PNG",
+  "animations": [
+    "idle",
+    "walk",
+    "alert",
+    "chase",
+    "search",
+    "lament",
+    "feed",
+    "ritual"
+  ],
+  "loop_seams": "passed",
+  "skin_weights": "passed"
+}

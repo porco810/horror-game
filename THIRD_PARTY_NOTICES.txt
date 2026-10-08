@@ -1,0 +1,6 @@
+The complete distribution includes unmodified runtime files from Three.js 0.180.0.
+Three.js is distributed under the MIT License; see node_modules/three/LICENSE.
+
+The optional development validator, gltf-validator 2.0.0-dev.3.10, is installed
+from npm when npm ci is run. Its license is Apache-2.0. It is not bundled in
+the minimal offline runtime included with the complete ZIP.

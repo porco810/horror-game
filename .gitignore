@@ -1,0 +1,11 @@
+node_modules/
+dist/
+__pycache__/
+*.pyc
+*.blend1
+*.blend2
+build_log.txt
+build_python_error.txt
+preview.log
+export/verification/
+export/game-verification/

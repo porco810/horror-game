@@ -1,0 +1,18 @@
+{
+  "character": {
+    "id": "kuchikagura",
+    "url": "kuchikagura.glb",
+    "units": "metres",
+    "up": "+Y",
+    "forward": "+Z",
+    "motion": "in-place",
+    "clips": ["idle", "walk", "alert", "chase", "search", "lament", "feed", "ritual"]
+  },
+  "povArms": {
+    "included": false,
+    "plannedAsset": "pov_arms.glb",
+    "parent": "camera",
+    "animationMixer": "separate",
+    "sharesPursuerSkeleton": false
+  }
+}

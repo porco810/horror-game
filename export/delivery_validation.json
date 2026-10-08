@@ -1,0 +1,8 @@
+{
+  "source_browser": "passed",
+  "standalone_package_browser": "passed",
+  "gltf_errors": 0,
+  "gltf_warnings": 0,
+  "verified_blender": "4.3.2",
+  "windows_blender_5_2_2_execution": "not run in Linux cloud"
+}
