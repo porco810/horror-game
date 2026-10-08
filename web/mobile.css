@@ -1,0 +1,98 @@
+.mobile-guide { display: none; }
+#orientation-screen { z-index: 50; display: grid; place-items: center; background: #0c1714f5; padding: 28px; }
+.orientation-card { width: 340px; max-width: 100%; text-align: center; }
+.orientation-card .overline { display: block; margin: 25px 0 14px; }
+.orientation-card h2 { font-size: 25px; }
+.orientation-card p:not(.overline) { font-size: 12px; line-height: 2; color: #b5bea7; }
+.orientation-card small { display: block; font-size: 10px; line-height: 1.9; color: #8f9e84; margin-top: 18px; }
+.orientation-card .primary { margin-top: 26px; font-size: 12px; }
+.rotate-phone { margin: auto; width: 86px; height: 46px; border: 2px solid #aeb893; border-radius: 9px; color: #d5c28d; font-size: 34px; line-height: 40px; }
+.inventory-card { width: 500px; max-width: 100%; max-height: calc(100dvh - 28px); overflow: auto; padding: 20px; border: 1px solid var(--line); background: #131e19; }
+.inventory-card header { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+.inventory-card .overline { font-size: 9px; margin: 0 0 7px; }
+.inventory-card h2 { font-size: 23px; margin-bottom: 15px; }
+.inventory-card .close-button { width: 44px; height: 44px; }
+#mobile-inventory { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+#mobile-inventory button { position: relative; min-height: 72px; border: 1px solid var(--line); background: #25332980; color: #d4d7c3; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 6px; }
+#mobile-inventory button.selected { border-color: #ccb781; background: #55573b69; }
+#mobile-inventory button:disabled { opacity: .35; cursor: default; }
+#mobile-inventory .item-glyph { font: 23px serif; color: #c6bc92; }
+#mobile-inventory .item-name { font-size: 11px; }
+#mobile-inventory .item-count { position: absolute; right: 8px; top: 7px; font-size: 10px; }
+#mobile-inventory kbd { display: none; }
+.inventory-help { font-size: 10px; line-height: 1.6; color: #a0af91; margin: 12px 0 0; }
+
+@media (pointer: coarse) {
+  body { --safe-left: max(18px, env(safe-area-inset-left)); --safe-right: max(18px, env(safe-area-inset-right)); --safe-top: max(12px, env(safe-area-inset-top)); --safe-bottom: max(12px, env(safe-area-inset-bottom)); overscroll-behavior: none; }
+  .mobile-guide { display: block; }
+  .desktop-guide { display: none; }
+  #touch-controls { display: block; position: absolute; inset: 0; pointer-events: none; user-select: none; -webkit-user-select: none; }
+  .pad-wrap { position: absolute; bottom: var(--safe-bottom); width: 112px; }
+  .move-pad-wrap { left: var(--safe-left); }
+  .look-pad-wrap { right: var(--safe-right); }
+  .pad-label { display: block; text-align: center; font-size: 10px; letter-spacing: .22em; margin-bottom: 9px; color: #b5c1a4; text-shadow: 0 2px 6px #000; }
+  #joystick, #look-pad { position: relative; inset: auto; width: 112px; height: 112px; border: 1px solid #c1cfaa55; border-radius: 50%; background: #10241b80; pointer-events: auto; touch-action: none; }
+  .touch-pad.active { border-color: #d0c193; background: #35453099; }
+  #joystick-knob, #look-pad-knob { position: absolute; width: 40px; height: 40px; left: 35px; top: 35px; border: 1px solid #b4c29b99; border-radius: 50%; background: #99aa7960; pointer-events: none; }
+  .pad-axis::before, .pad-axis::after { content: ''; position: absolute; background: #b3c59d30; pointer-events: none; }
+  .pad-axis::before { width: 1px; height: 74px; top: 18px; left: 55px; }
+  .pad-axis::after { height: 1px; width: 74px; left: 18px; top: 55px; }
+  .touch-dock { position: absolute; bottom: var(--safe-bottom); left: 50%; transform: translateX(-50%); width: 264px; }
+  .touch-actions, .movement-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .movement-modes { margin-top: 8px; }
+  .touch-dock button, #touch-fullscreen { min-height: 44px; font-size: 11px; border: 1px solid #9fac8260; border-radius: 6px; background: #122019e6; color: #d6dac0; touch-action: manipulation; }
+  .touch-actions button { min-height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+  .touch-actions small { font-size: 9px; color: #a6b490; }
+  .touch-actions button:disabled { opacity: .45; cursor: default; }
+  .movement-modes button[aria-pressed=true] { border-color: #d0c193; background: #706a3bd9; color: #f2e7c3; }
+  #touch-fullscreen { position: absolute; right: var(--safe-right); top: calc(var(--safe-top) + 54px); min-width: 64px; }
+  .hud-top { top: var(--safe-top); left: var(--safe-left); right: var(--safe-right); gap: 10px; }
+  .quest { max-width: min(36%, 280px); }
+  .hud-eyebrow { display: none; }
+  #objective { font-size: 10px; line-height: 1.6; margin-bottom: 6px; }
+  #seal-progress > span { width: 18px; height: 21px; font-size: 10px; }
+  .hud-actions { gap: 6px; }
+  .hud-actions button { min-width: 44px; height: 44px; padding: 8px 11px; font-size: 11px; }
+  .compass { top: 0; gap: 4px; }
+  .compass > i { height: 6px; }
+  .hud-bottom { position: absolute; left: var(--safe-left); right: auto; top: calc(var(--safe-top) + 58px); bottom: auto; transform: none; width: 112px; display: block; }
+  .hud-bottom > .breath { position: static; inset: auto; width: 100%; gap: 6px; }
+  .breath > span { text-align: left; font-size: 9px; }
+  .inventory-wrap, .hud-hints, #look-hint { display: none !important; }
+  #interaction kbd, .hud-actions kbd { display: none; }
+  #interaction { top: calc(50% + 18px); max-width: 52%; padding: 7px 10px; font-size: 10px; white-space: normal; text-align: center; }
+  #subtitle { top: calc(var(--safe-top) + 54px); bottom: auto; max-width: 440px; width: 56%; font-size: 11px; line-height: 1.6; }
+  #toast { left: var(--safe-left); right: auto; top: calc(var(--safe-top) + 94px); max-width: min(230px, 28%); padding: 8px 12px; font-size: 10px; }
+  .overlay { padding: max(12px, env(safe-area-inset-top)) var(--safe-right) max(12px, env(safe-area-inset-bottom)) var(--safe-left); }
+  .menu-card { max-height: calc(100dvh - 28px); }
+  .journal-card { max-height: calc(100dvh - 28px); padding: 20px; }
+  .journal-card > header { position: sticky; top: -20px; z-index: 1; padding-top: 12px; background: #131e19; }
+  .journal-card .close-button { width: 44px; height: 44px; }
+  .journal-layout { grid-template-columns: minmax(150px, 210px) minmax(0, 1fr); gap: 22px; }
+  .journal-layout > div:first-child { width: 100%; margin: 0; }
+  .journal-card h2 { font-size: 23px; }
+}
+
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 600px) {
+  .edition { top: var(--safe-top); left: var(--safe-left); right: var(--safe-right); font-size: 8px; }
+  .edition-right { font-size: 8px; max-width: none; }
+  .title-content { left: calc(var(--safe-left) + 20px); top: 50%; transform: translateY(-50%); max-width: 630px; width: calc(100% - var(--safe-left) - var(--safe-right) - 40px); display: grid; grid-template-columns: minmax(180px, 1fr) minmax(220px, 260px); column-gap: 24px; }
+  .title-content .overline { grid-column: 1; grid-row: 1; font-size: 9px; margin: 0 0 16px; }
+  .title-content h1 { grid-column: 1; grid-row: 2 / 4; font-size: clamp(45px, 8vw, 60px); line-height: 1.1; }
+  .title-mark { font-size: 8px; right: -14px; }
+  .title-roman { grid-column: 1; grid-row: 4; font-size: 7px; margin: 13px 0 0; }
+  .premise { grid-column: 2; grid-row: 1 / 3; font-size: 11px; line-height: 1.85; margin: 0 0 16px; }
+  .title-actions { grid-column: 2; grid-row: 3 / 5; width: 100%; }
+  .title-actions .primary { min-height: 44px; padding: 11px 15px; font-size: 12px; }
+  #continue { padding: 10px 1px; }
+  .title-links { margin-top: 3px; }
+  .loading-status { grid-column: 2; grid-row: 5; font-size: 8px; margin: 8px 0 0; }
+  .title-footer { left: var(--safe-left); right: var(--safe-right); bottom: var(--safe-bottom); flex-direction: row; max-width: none; font-size: 8px; gap: 10px; }
+  .chapter-sign { display: none; }
+  .title-screen { background: linear-gradient(90deg, #06100deb, #08110eb0 60%, #06130b10); }
+  .menu-card h2 { font-size: 25px; margin-bottom: 14px; }
+  .menu-card .overline { margin-bottom: 12px; }
+  .menu-copy { margin-bottom: 16px; }
+  .menu-link { min-height: 44px; padding: 12px 2px; }
+  .save-note { margin-top: 12px; }
+}

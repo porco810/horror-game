@@ -11,35 +11,115 @@ from playwright.sync_api import sync_playwright
 
 ROOT=Path(__file__).resolve().parents[1]
 OUTPUT=ROOT/'export/game-verification'
-URL='http://127.0.0.1:'+os.environ.get('KUCHI_PREVIEW_PORT','8765')+'/'
+URL=os.environ.get('KUCHI_GAME_URL','http://127.0.0.1:'+os.environ.get('KUCHI_PREVIEW_PORT','8765')).rstrip('/')+'/'
 
 def test_mobile(browser,errors,failures,record):
     mobile=browser.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True,device_scale_factor=1)
     mp=mobile.new_page();mp.on('pageerror',lambda e:errors.append(str(e)))
     mp.on('requestfailed',lambda r:failures.append({'url':r.url,'failure':r.failure}))
     mp.goto(URL+'?test=1',wait_until='networkidle');mp.wait_for_function("document.body.dataset.ready==='true'",timeout=60000)
+    mp.screenshot(path=str(OUTPUT/'mobile-portrait.png'))
+    assert mp.locator('#orientation-screen').is_visible()
+    assert mp.locator('#title-screen').evaluate('(e)=>e.inert')
+    mp.set_viewport_size({'width':844,'height':390});mp.wait_for_function("document.querySelector('#orientation-screen').hidden")
     mp.screenshot(path=str(OUTPUT/'mobile-title.png'));mp.locator('#start').tap()
-    assert mp.locator('#touch-controls').is_visible();assert mp.evaluate('document.documentElement.scrollWidth')==390
-    mp.locator('#touch-crouch').tap();mp.evaluate('window.kuchiGame.advance(.1)');assert mp.evaluate('window.kuchiGame.player.crouching')
-    mp.locator('#touch-run').tap();mp.locator('#torch-toggle').tap();assert not mp.evaluate('window.kuchiGame.player.flashlight')
-    mp.locator('#journal-toggle').tap();assert mp.locator('#journal-screen').is_visible()
-    r=mp.locator('.journal-card').bounding_box();assert r['x']>=0 and r['x']+r['width']<=390
-    mp.screenshot(path=str(OUTPUT/'mobile-journal.png'))
-    mp.locator('#close-journal').tap()
-    # Browser-dispatched touch creates active pointers and real capture.
-    cdp=mobile.new_cdp_session(mp);r=mp.locator('#joystick').bounding_box()
-    z=mp.evaluate('window.kuchiGame.player.z')
-    cdp.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':r['x']+50,'y':r['y']+20,'id':1}]})
-    mp.evaluate('window.kuchiGame.advance(1)')
-    cdp.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
-    assert mp.evaluate('window.kuchiGame.player.z')<z-.6
-    yaw=mp.evaluate('window.kuchiGame.player.yaw')
-    cdp.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':320,'y':350,'id':2}]})
-    cdp.send('Input.dispatchTouchEvent',{'type':'touchMove','touchPoints':[{'x':260,'y':370,'id':2}]})
-    cdp.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
-    assert abs(mp.evaluate('window.kuchiGame.player.yaw')-yaw)>.05
+    mp.evaluate('window.kuchiGame.enemy.grace=999')
+    cdp=mobile.new_cdp_session(mp)
+    def advance(t):mp.evaluate('(t)=>window.kuchiGame.advance(t)',t)
+    def state():return mp.evaluate('window.kuchiGame.snapshot()')
+    def point(selector,dx=0,dy=0,id=1):
+        r=mp.locator(selector).bounding_box()
+        return {'x':r['x']+r['width']/2+dx,'y':r['y']+r['height']/2+dy,'id':id}
+    def touch(kind,points):cdp.send('Input.dispatchTouchEvent',{'type':kind,'touchPoints':points})
+    def check_layout(width,height):
+        assert mp.evaluate('document.documentElement.scrollWidth')==width
+        controls=['#joystick','#look-pad','#inventory-toggle','#touch-interact','#touch-offer','#touch-walk','#touch-run','#touch-crouch','#torch-toggle','#journal-toggle','#pause-toggle','#touch-fullscreen']
+        for selector in controls:
+            r=mp.locator(selector).bounding_box()
+            assert r and r['x']>=0 and r['y']>=0 and r['x']+r['width']<=width and r['y']+r['height']<=height,(selector,r,width,height)
+            assert mp.locator(selector).evaluate('(e)=>{const r=e.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return e===hit||e.contains(hit)}'),selector
+        a=mp.locator('#joystick').bounding_box();b=mp.locator('.touch-dock').bounding_box();c=mp.locator('#look-pad').bounding_box()
+        assert a['x']+a['width']<b['x'] and b['x']+b['width']<c['x']
+        assert not mp.locator('#inventory').is_visible()
+    check_layout(844,390)
+    assert mp.locator('#touch-walk').get_attribute('aria-pressed')=='true'
+    mp.locator('#touch-crouch').tap();advance(.1);assert state()['player']['crouching']
+    mp.locator('#touch-run').tap();advance(.1);assert not state()['player']['crouching']
+    assert mp.locator('#touch-crouch').get_attribute('aria-pressed')=='false'
+    mp.locator('#touch-run').tap();assert mp.locator('#touch-walk').get_attribute('aria-pressed')=='true'
+    mp.locator('#touch-crouch').tap();mp.locator('#touch-walk').tap();advance(.1);assert not state()['player']['crouching']
+    mp.locator('#torch-toggle').tap();assert not state()['player']['flashlight']
+    mp.evaluate('window.kuchiGame.teleport(0,25)')
+    before=state()['player'];left=point('#joystick',dy=-30)
+    touch('touchStart',[left]);advance(.4);touch('touchEnd',[])
+    after=state()['player'];assert after['z']<before['z']-.8;assert after['yaw']==before['yaw']
+    advance(.2);assert state()['player']['z']==after['z']
+    mp.locator('#touch-run').tap();before=state()['player']['z']
+    touch('touchStart',[left]);advance(.4);assert state()['player']['running'];touch('touchEnd',[])
+    assert state()['player']['z']<before-1.5
+    mp.locator('#touch-walk').tap()
+    before=state()['player'];right=point('#look-pad',dx=30,dy=15,id=2)
+    touch('touchStart',[right]);advance(.4);touch('touchEnd',[])
+    after=state()['player'];assert abs(after['yaw']-before['yaw'])>.4;assert abs(after['pitch']-before['pitch'])>.15
+    assert after['x']==before['x'] and after['z']==before['z']
+    advance(.2);assert state()['player']['yaw']==after['yaw']
+    # Two actual browser touches control independent pads at the same time.
+    mp.evaluate('window.kuchiGame.teleport(0,25)');before=state()['player']
+    touch('touchStart',[left,right]);advance(.4)
+    after=state()['player'];assert after['z']<before['z']-.5;assert abs(after['yaw']-before['yaw'])>.4
+    touch('touchCancel',[]);advance(.2);assert state()['player']['yaw']==after['yaw'];assert state()['player']['z']==after['z']
+    assert mp.locator('#joystick-knob').evaluate('(e)=>e.style.transform')==''
+    assert mp.locator('#look-pad-knob').evaluate('(e)=>e.style.transform')==''
+    # Leaving play releases captured input, even while fingers are held down.
+    touch('touchStart',[left,right]);mp.locator('#pause-toggle').click();assert state()['mode']=='paused'
+    frozen=state();advance(2);assert state()['progress']['elapsed']==frozen['progress']['elapsed']
+    touch('touchEnd',[]);mp.locator('#resume').tap();before=state()['player'];advance(.3);assert state()['player']==before
+    # Portrait freezes AI, timers and motion; rotating back requires fresh input.
+    touch('touchStart',[left,right]);mp.set_viewport_size({'width':390,'height':844})
+    mp.wait_for_function("!document.querySelector('#orientation-screen').hidden")
+    frozen=state();advance(2);assert state()==frozen
+    touch('touchEnd',[]);mp.set_viewport_size({'width':844,'height':390})
+    mp.wait_for_function("document.querySelector('#orientation-screen').hidden")
+    before=state()['player'];advance(.3);assert state()['player']==before
+    # Real action taps collect items and open notes.
+    mp.evaluate("window.kuchiGame.teleport(1,31);window.kuchiGame.aim('note_village')")
+    assert mp.locator('#touch-interact').inner_text()=='読む';mp.locator('#touch-interact').tap()
+    assert mp.locator('#journal-screen').is_visible()
+    r=mp.locator('.journal-card').bounding_box();assert r['x']>=0 and r['x']+r['width']<=844
+    mp.screenshot(path=str(OUTPUT/'mobile-journal.png'));mp.locator('#close-journal').tap()
+    for item,x,z in [('bell',2.4,30.6),('rice_start',3,30.6)]:
+        mp.evaluate('([x,z,id])=>{window.kuchiGame.teleport(x,z);window.kuchiGame.aim(id)}',[x,z,item])
+        assert mp.locator('#touch-interact').inner_text()=='拾う';mp.locator('#touch-interact').tap()
+        assert item in state()['progress']['collected']
+    mp.locator('#inventory-toggle').tap();assert state()['mode']=='inventory'
+    assert mp.locator('#inventory-toggle').get_attribute('aria-expanded')=='true'
+    frozen=state();advance(3);assert state()==frozen
+    assert mp.locator('#mobile-inventory [data-item="photograph"]').is_disabled()
+    mp.screenshot(path=str(OUTPUT/'mobile-inventory.png'))
+    mp.locator('#mobile-inventory [data-item="onigiri"]').tap();assert state()['mode']=='playing'
+    assert mp.locator('#touch-offer-label').inner_text()=='手向ける'
+    assert mp.locator('#touch-selected').inner_text()=='握り飯'
+    mp.evaluate("const g=window.kuchiGame;g.teleport(0,10);g.enemy.position={x:0,z:4};g.enemy.transition('idle',50)")
+    before=state()['progress']['inventory']['onigiri'];mp.locator('#touch-offer').tap()
+    assert state()['progress']['inventory']['onigiri']==before-1;advance(1.6);assert state()['enemy']['state']=='feed'
+    mp.locator('#inventory-toggle').tap();mp.locator('#mobile-inventory [data-item="kagura_bell"]').tap()
+    assert mp.locator('#touch-offer-label').inner_text()=='鈴を鳴らす'
+    mp.locator('#touch-offer').tap();assert state()['bellCooldown']>11
+    assert mp.locator('#touch-offer').is_disabled();assert '秒' in mp.locator('#touch-offer-hint').inner_text()
+    mp.locator('#inventory-toggle').tap();mp.locator('#close-inventory').tap();assert state()['mode']=='playing'
     mp.screenshot(path=str(OUTPUT/'mobile-play.png'))
-    mobile.close();record('mobile/layout/touch-actions/joystick/drag-look')
+    # Short and notched-phone-sized landscapes keep both pads and all actions reachable.
+    for width,height in [(640,320),(667,375),(932,430)]:
+        mp.set_viewport_size({'width':width,'height':height});check_layout(width,height)
+        mp.locator('#inventory-toggle').tap()
+        r=mp.locator('.inventory-card').bounding_box();assert r['x']>=0 and r['y']>=0 and r['x']+r['width']<=width and r['y']+r['height']<=height
+        mp.locator('#close-inventory').tap()
+        mp.screenshot(path=str(OUTPUT/f'mobile-landscape-{width}.png'))
+        mp.locator('#pause-toggle').tap();mp.locator('#return-title').tap()
+        for selector in ['#start','#continue','#title-settings']:
+            r=mp.locator(selector).bounding_box();assert r and r['y']>=0 and r['y']+r['height']<=height,(selector,r,height)
+        mp.locator('#continue').tap()
+    mobile.close();record('mobile/landscape/two-pads/multitouch/release-cancel/movement-modes/inventory-pause/context-actions/rotation/compact-layouts')
 
 def main():
     OUTPUT.mkdir(parents=True,exist_ok=True)
@@ -54,7 +134,7 @@ def main():
             test_mobile(browser,errors,failures,record)
             assert not errors,errors
             assert not failures,failures
-            result={'status':'passed','checks':checks,'javascript_errors':errors,'failed_requests':failures}
+            result={'status':'passed','url':URL,'checks':checks,'javascript_errors':errors,'failed_requests':failures}
             (OUTPUT/'mobile_validation.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
             print(json.dumps(result,ensure_ascii=False,indent=2))
             browser.close()
@@ -195,7 +275,7 @@ def main():
         # Touch controls and small-screen layouts use a separate mobile context.
         test_mobile(browser,errors,failures,record)
         assert not errors,errors;assert not failures,failures
-        result={'status':'passed','browser':browser.version,'checks':checks,'javascript_errors':errors,'failed_requests':failures}
+        result={'status':'passed','url':URL,'browser':browser.version,'checks':checks,'javascript_errors':errors,'failed_requests':failures}
         (OUTPUT/'game_validation.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
         print(json.dumps(result,ensure_ascii=False,indent=2))
         browser.close()

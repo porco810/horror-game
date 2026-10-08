@@ -7,6 +7,7 @@
   <meta name="description" content="霧の村を探索し、忘れられた祭祀の記憶を手向ける一人称民俗ホラー。">
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="game.css">
+  <link rel="stylesheet" href="mobile.css">
   <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/examples/jsm/"}}</script>
 </head>
 <body>
@@ -22,7 +23,7 @@
       <div class="title-actions"><button id="start" class="primary" disabled><span>村へ入る</span><span aria-hidden="true">→</span></button><button id="continue" class="text-button" hidden>記憶の続きから <span>→</span></button><div class="title-links"><button id="title-settings" class="text-button">環境設定</button><a href="character.html">怪異を観る</a></div></div>
       <p id="loading-status" role="status" class="loading-status">村の記憶を読み込んでいます…</p>
     </div>
-    <footer class="title-footer"><span>音の方向が、道しるべになる。</span><span>WASD 移動 <i>·</i> E 調べる <i>·</i> G 手向ける <i>·</i> スマートフォン対応</span></footer>
+    <footer class="title-footer"><span>音の方向が、道しるべになる。</span><span class="desktop-guide">WASD 移動 <i>·</i> E 調べる <i>·</i> G 手向ける</span><span class="mobile-guide">横向きで探索 · 左で移動 / 右で見回す</span></footer>
     <div class="chapter-sign" aria-hidden="true"><span>壱</span><small>帰らずの里</small><div></div></div>
   </main>
   <div id="hud" hidden>
@@ -30,9 +31,19 @@
     <div id="crosshair" aria-hidden="true"><i></i></div><div id="interaction" hidden><kbd>E</kbd><span id="interaction-text"></span></div>
     <div id="subtitle" role="status" aria-live="polite"></div><div id="toast" role="status" aria-live="polite"></div>
     <div class="hud-bottom"><div class="breath"><span id="posture">歩く</span><div class="stamina-track"><i id="stamina-fill"></i></div><small>息</small></div><div class="inventory-wrap"><div id="inventory" aria-label="手向ける品物"></div><p id="selected-hint">品物を拾って、手向ける。</p></div><div class="hud-hints"><span>Shift 走る <i>·</i> C しゃがむ</span><span>G 投げる <i>·</i> R 鈴を鳴らす</span></div></div>
-    <div id="touch-controls"><div id="joystick" aria-label="移動パッド"><div id="joystick-knob"></div></div><div class="touch-buttons"><button id="touch-interact" aria-label="調べる">調べる</button><button id="touch-offer" aria-label="手向ける">手向ける</button><button id="touch-run" aria-pressed="false">走る</button><button id="touch-crouch" aria-pressed="false">屈む</button></div><p>右側をなぞって見回す</p></div>
+    <div id="touch-controls">
+      <div class="pad-wrap move-pad-wrap"><span class="pad-label">移動</span><div id="joystick" class="touch-pad" role="group" aria-label="移動パッド"><span class="pad-axis" aria-hidden="true"></span><div id="joystick-knob" class="pad-knob"></div></div></div>
+      <div class="pad-wrap look-pad-wrap"><span class="pad-label">視点</span><div id="look-pad" class="touch-pad" role="group" aria-label="視点パッド"><span class="pad-axis" aria-hidden="true"></span><div id="look-pad-knob" class="pad-knob"></div></div></div>
+      <div class="touch-dock">
+        <div class="touch-actions"><button id="inventory-toggle" aria-label="品物を選ぶ" aria-haspopup="dialog" aria-controls="inventory-screen" aria-expanded="false"><span>品物</span><small id="touch-selected">未所持</small></button><button id="touch-interact" aria-label="調べる" disabled>調べる</button><button id="touch-offer" aria-label="手向ける" disabled><span id="touch-offer-label">手向ける</span><small id="touch-offer-hint">未所持</small></button></div>
+        <div class="movement-modes" role="group" aria-label="移動の仕方"><button id="touch-walk" aria-pressed="true">歩く</button><button id="touch-run" aria-pressed="false">走る</button><button id="touch-crouch" aria-pressed="false">屈む</button></div>
+      </div>
+      <button id="touch-fullscreen" aria-label="全画面にする">全画面</button>
+    </div>
     <div id="look-hint" hidden>画面をクリックして見回す <span>／ ドラッグ・矢印キーでも操作できます</span></div>
   </div>
+  <section id="inventory-screen" class="screen overlay" role="dialog" aria-modal="true" aria-labelledby="inventory-title" hidden><div class="inventory-card"><header><div><p class="overline">手元から、記憶を選ぶ。</p><h2 id="inventory-title">手向ける品物</h2></div><button id="close-inventory" class="close-button" aria-label="品物欄を閉じる">×</button></header><div id="mobile-inventory" aria-label="所持品"></div><p class="inventory-help">品物を選ぶと探索へ戻ります。開いている間は一時停止。</p></div></section>
+  <section id="orientation-screen" class="screen" role="dialog" aria-modal="true" aria-labelledby="orientation-title" hidden><div class="orientation-card"><div class="rotate-phone" aria-hidden="true">↻</div><p class="overline">この夜は、横向きで。</p><h2 id="orientation-title">端末を横にしてください</h2><p>左のパッドで移動。右のパッドで見回す。<br>プレイ中に縦向きにすると、一時停止します。</p><button id="rotate-fullscreen" class="primary">全画面で横向きにする <span>↻</span></button><small>自動で回転しない場合は、端末の回転ロックを解除してください。</small></div></section>
   <section id="pause-screen" class="screen overlay" role="dialog" aria-modal="true" aria-labelledby="pause-title" hidden><div class="menu-card"><p class="overline">足音が、遠ざかる。</p><h2 id="pause-title">息をひそめる</h2><p class="menu-copy">記憶は、拾ったものとともに残る。</p><button id="resume" class="primary">村へ戻る <span>→</span></button><button id="pause-journal" class="menu-link">手記を開く</button><button id="pause-settings" class="menu-link">環境設定</button><button id="return-title" class="menu-link">表題へ戻る</button><p class="save-note" id="save-status">拾得時に自動保存</p></div></section>
   <section id="settings-screen" class="screen overlay" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden><div class="menu-card settings-card"><p class="overline">この夜を歩くために。</p><h2 id="settings-title">環境設定</h2><label class="setting-row"><span>怪異の追跡<small>穏やか：追跡速度と察知距離を抑える</small></span><select id="difficulty"><option value="normal">標準</option><option value="gentle">穏やか</option></select></label><label class="setting-row"><span>明るさ</span><input id="brightness" type="range" min="0.8" max="1.8" step="0.05" value="1.25"></label><label class="setting-row"><span>音量</span><input id="volume" type="range" min="0" max="1" step="0.05" value="0.55"></label><label class="setting-row"><span>視点の感度</span><input id="sensitivity" type="range" min="0.5" max="2" step="0.1" value="1"></label><label class="setting-row"><span>視点の揺れを抑える</span><input id="reduce-motion" type="checkbox"></label><label class="setting-row"><span>描画品質</span><select id="quality"><option value="standard">標準</option><option value="low">軽量</option></select></label><button id="close-settings" class="primary">戻る <span>←</span></button></div></section>
   <section id="journal-screen" class="screen overlay journal-screen" role="dialog" aria-modal="true" aria-labelledby="journal-title" hidden><div class="journal-card"><header><div><p class="overline">忘れないために。</p><h2 id="journal-title">拾い集めた記憶</h2></div><button id="close-journal" class="close-button" aria-label="手記を閉じる">×</button></header><div class="journal-layout"><div><p class="journal-label">村の見取り図</p><canvas id="village-map" width="360" height="440" aria-label="南に門、北に社、中央に屋敷と井戸と蔵"></canvas><p id="journal-objective" class="map-caption"></p></div><div><div id="notes-list"></div><details class="controls-details"><summary>歩き方と手向け方</summary><p>WASD ／ 矢印キー：移動・見回す<br>マウス ／ 画面ドラッグ：見回す<br>Shift：走る　C：しゃがむ　F：灯り<br>E：調べる・拾う　1〜6：品物を選ぶ<br>G ／ マウス左：品物を投げる<br>R：神楽鈴を鳴らす　Tab：手記　Esc：停止</p><p>写真・かんざし・草履は嘆きを、食べ物は空腹を呼び覚ます。怪異の近くへ投げ、反応しているあいだに離れよう。鈴は持っているだけで何度でも鳴らせる。再び鳴らすまで12秒必要。</p><p>壁や家の陰に隠れ、灯りを消す。しゃがむと気づかれにくい。札を集めたら北の社へ、鍵を受け取ったら南の門へ。</p></details></div></div></div></section>

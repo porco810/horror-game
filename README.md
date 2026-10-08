@@ -4,6 +4,8 @@
 村の屋敷・井戸・蔵で三枚の鎮め札を集め、北の社で境の鍵を受け取り、南の門から脱出します。
 オリジナルの女性型追跡怪異「朽ち神楽」、Blender編集用モデル、8種類の骨格アニメーションも含みます。
 
+[ブラウザで遊ぶ](https://porco810.github.io/horror-game/) — スマートフォンは横向きで操作します。
+
 ## ゲームを起動する
 
 Windowsでは `PLAY.bat` を実行します。既存の `PREVIEW_ONLY.bat` でもゲーム本編が開きます。
@@ -20,12 +22,11 @@ HTTPサーバーが必要なので、`web/index.html` を直接ダブルクリ�
 GitHub の「Code → Download ZIP」で取得し、展開したフォルダーで `npm ci` を実行してください。
 Three.jsを同梱した完成版ZIPは [KUCHI_KAGURA_GAME_V1.zip](https://github.com/porco810/horror-game/raw/refs/heads/gh-pages/downloads/KUCHI_KAGURA_GAME_V1.zip) です。
 
-`gh-pages` ブランチには依存ファイルを同梱した静的サイトを配置します。
-GitHub の [Settings → Pages](https://github.com/porco810/horror-game/settings/pages) で、
-Sourceを「Deploy from a branch」、Branchを「gh-pages / (root)」にして保存すると公開できます。
-公開設定とGitHub側の配信処理が完了したあとのゲームURLは `https://porco810.github.io/horror-game/`、
+`gh-pages` ブランチには依存ファイルを同梱した静的サイトを配置しています。
+GitHub の [Settings → Pages](https://github.com/porco810/horror-game/settings/pages) は、
+Source「Deploy from a branch」、Branch「gh-pages / (root)」で配信する設定です。
+ゲームURLは `https://porco810.github.io/horror-game/`、
 キャラクター確認は `https://porco810.github.io/horror-game/character.html` です。
-URLを記載しただけでは公開の完了を意味しません。GitHub側のPages設定と実際の表示を確認してください。
 
 ### 操作
 
@@ -41,7 +42,13 @@ URLを記載しただけでは公開の完了を意味しません。GitHub側�
 | 手記・見取り図 | Tab |
 | 一時停止 | Esc・P |
 
-スマートフォンでは左の移動パッド、右側のドラッグ、調べる・手向けるボタンを使います。
+スマートフォンは横画面で操作します。縦向きでは端末を回す案内を表示し、探索を一時停止します。
+左の移動パッドと右の視点パッドは、二本の指で同時に操作できます。パッドは傾けている間だけ動きます。
+中央の「歩く・走る・屈む」はタップで切り替え、選択中の行動を明るく表示します。
+「品物」ボタンで所持品を開き、選ぶと探索へ戻ります。品物欄を開いている間も一時停止します。
+「調べる」は対象に応じて「読む・拾う・札を納める・門を開く」に変わり、
+神楽鈴を選ぶと「手向ける」は「鈴を鳴らす」になり、再使用までの秒数を表示します。
+「全画面」は対応ブラウザで全画面化と横向き固定を試みます。非対応の端末では手動で横にしてください。
 写真・かんざし・子どもの草履に反応すると嘆き、握り飯・団子なら食らい、鈴なら神楽を舞います。
 品物は怪異の近くへ投げてください。気づかれなかった品物は地面に残り、Eで拾い直せます。
 走る音や灯りに気づかれたら、家の陰に隠れて視線を切り、灯りを消してしゃがみましょう。
@@ -89,6 +96,7 @@ npm run preview
 別ターミナルで `npm run test:game`（本編）と `npm run test:browser`（キャラクター確認）を実行できます。
 `npm run build:web` のあと `npm run test:static` で、別のHTTPサーバーのサブディレクトリでも読み込みと操作を確認できます。
 ブラウザ検証はPython Playwrightと `/usr/bin/chromium` を使います。このクラウドには両方が入っています。
+`KUCHI_GAME_URL=https://porco810.github.io/horror-game/ python3 tools/smoke_game.py --mobile-only` で公開版の携帯操作も検証できます。
 サーバーの標準ポートは8765です。必要なら `KUCHI_PREVIEW_PORT` で変更し、検証時にも同じ値を指定してください。
 Web表示に外部CDN、APIキー、認証情報は必要ありません。依存更新時だけ `registry.npmjs.org` を使います。
 
