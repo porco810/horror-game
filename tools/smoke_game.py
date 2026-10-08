@@ -23,6 +23,8 @@ def test_mobile(browser,errors,failures,record):
     assert mp.locator('#title-screen').evaluate('(e)=>e.inert')
     mp.set_viewport_size({'width':844,'height':390});mp.wait_for_function("document.querySelector('#orientation-screen').hidden")
     mp.screenshot(path=str(OUTPUT/'mobile-title.png'));mp.locator('#start').tap()
+    mp.wait_for_function('document.fullscreenElement !== null')
+    assert mp.locator('#touch-fullscreen').inner_text()=='縮小'
     mp.evaluate('window.kuchiGame.enemy.grace=999')
     cdp=mobile.new_cdp_session(mp)
     def advance(t):mp.evaluate('(t)=>window.kuchiGame.advance(t)',t)
@@ -33,40 +35,52 @@ def test_mobile(browser,errors,failures,record):
     def touch(kind,points):cdp.send('Input.dispatchTouchEvent',{'type':kind,'touchPoints':points})
     def check_layout(width,height):
         assert mp.evaluate('document.documentElement.scrollWidth')==width
-        controls=['#joystick','#look-pad','#inventory-toggle','#touch-interact','#touch-offer','#touch-walk','#touch-run','#touch-crouch','#torch-toggle','#journal-toggle','#pause-toggle','#touch-fullscreen']
+        controls=['#joystick','#look-pad','#inventory-toggle','#touch-interact','#touch-offer','#touch-mode','#torch-toggle','#journal-toggle','#pause-toggle','#touch-fullscreen']
         for selector in controls:
             r=mp.locator(selector).bounding_box()
             assert r and r['x']>=0 and r['y']>=0 and r['x']+r['width']<=width and r['y']+r['height']<=height,(selector,r,width,height)
             assert mp.locator(selector).evaluate('(e)=>{const r=e.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return e===hit||e.contains(hit)}'),selector
-        a=mp.locator('#joystick').bounding_box();b=mp.locator('.touch-dock').bounding_box();c=mp.locator('#look-pad').bounding_box()
-        assert a['x']+a['width']<b['x'] and b['x']+b['width']<c['x']
+        left=mp.locator('.move-pad-wrap').bounding_box();right=mp.locator('.look-pad-wrap').bounding_box()
+        assert left['x']+left['width']<width*.4 and right['x']>width*.6
+        for pad,buttons in [('#joystick',['#inventory-toggle','#touch-mode']),('#look-pad',['#touch-interact','#touch-offer'])]:
+            r=mp.locator(pad).bounding_box()
+            for selector in buttons:
+                b=mp.locator(selector).bounding_box();assert b['y']>r['y']+r['height']
+                assert b['width']>=44 and b['height']>=44
+        assert mp.locator('#touch-mode').count()==1
+        assert mp.locator('#touch-walk,#touch-run,#touch-crouch,.touch-dock').count()==0
         assert not mp.locator('#inventory').is_visible()
     check_layout(844,390)
-    assert mp.locator('#touch-walk').get_attribute('aria-pressed')=='true'
-    mp.locator('#touch-crouch').tap();advance(.1);assert state()['player']['crouching']
-    mp.locator('#touch-run').tap();advance(.1);assert not state()['player']['crouching']
-    assert mp.locator('#touch-crouch').get_attribute('aria-pressed')=='false'
-    mp.locator('#touch-run').tap();assert mp.locator('#touch-walk').get_attribute('aria-pressed')=='true'
-    mp.locator('#touch-crouch').tap();mp.locator('#touch-walk').tap();advance(.1);assert not state()['player']['crouching']
+    assert mp.locator('#touch-mode-label').inner_text()=='歩く'
+    mp.locator('#touch-mode').tap();assert mp.locator('#touch-mode-label').inner_text()=='走る'
+    mp.locator('#touch-mode').tap();advance(.1);assert state()['player']['crouching']
+    assert mp.locator('#touch-mode-label').inner_text()=='屈む'
+    mp.locator('#touch-mode').tap();advance(.1);assert not state()['player']['crouching']
+    assert mp.locator('#touch-mode-label').inner_text()=='歩く'
+    # Native full screen starts on play, pauses on exit and re-enters on resume.
+    mp.locator('#touch-fullscreen').tap();mp.wait_for_function('document.fullscreenElement === null')
+    assert state()['mode']=='paused';mp.locator('#fullscreen-note').wait_for(state='visible')
+    mp.locator('#resume').tap();mp.wait_for_function('document.fullscreenElement !== null')
+    assert state()['mode']=='playing'
     mp.locator('#torch-toggle').tap();assert not state()['player']['flashlight']
     mp.evaluate('window.kuchiGame.teleport(0,25)')
     before=state()['player'];left=point('#joystick',dy=-30)
     touch('touchStart',[left]);advance(.4);touch('touchEnd',[])
     after=state()['player'];assert after['z']<before['z']-.8;assert after['yaw']==before['yaw']
     advance(.2);assert state()['player']['z']==after['z']
-    mp.locator('#touch-run').tap();before=state()['player']['z']
+    mp.locator('#touch-mode').tap();before=state()['player']['z']
     touch('touchStart',[left]);advance(.4);assert state()['player']['running'];touch('touchEnd',[])
     assert state()['player']['z']<before-1.5
-    mp.locator('#touch-walk').tap()
+    mp.locator('#touch-mode').tap();mp.locator('#touch-mode').tap()
     before=state()['player'];right=point('#look-pad',dx=30,dy=15,id=2)
     touch('touchStart',[right]);advance(.4);touch('touchEnd',[])
-    after=state()['player'];assert abs(after['yaw']-before['yaw'])>.4;assert abs(after['pitch']-before['pitch'])>.15
+    after=state()['player'];assert .32<abs(after['yaw']-before['yaw'])<.45;assert .12<abs(after['pitch']-before['pitch'])<.19
     assert after['x']==before['x'] and after['z']==before['z']
     advance(.2);assert state()['player']['yaw']==after['yaw']
     # Two actual browser touches control independent pads at the same time.
     mp.evaluate('window.kuchiGame.teleport(0,25)');before=state()['player']
     touch('touchStart',[left,right]);advance(.4)
-    after=state()['player'];assert after['z']<before['z']-.5;assert abs(after['yaw']-before['yaw'])>.4
+    after=state()['player'];assert after['z']<before['z']-.5;assert .32<abs(after['yaw']-before['yaw'])<.45
     touch('touchCancel',[]);advance(.2);assert state()['player']['yaw']==after['yaw'];assert state()['player']['z']==after['z']
     assert mp.locator('#joystick-knob').evaluate('(e)=>e.style.transform')==''
     assert mp.locator('#look-pad-knob').evaluate('(e)=>e.style.transform')==''
@@ -119,7 +133,22 @@ def test_mobile(browser,errors,failures,record):
         for selector in ['#start','#continue','#title-settings']:
             r=mp.locator(selector).bounding_box();assert r and r['y']>=0 and r['y']+r['height']<=height,(selector,r,height)
         mp.locator('#continue').tap()
-    mobile.close();record('mobile/landscape/two-pads/multitouch/release-cancel/movement-modes/inventory-pause/context-actions/rotation/compact-layouts')
+    mobile.close();record('mobile/slower-look/side-controls/single-cycle-button/fullscreen-entry-exit-resume/multitouch/inventory/rotation/four-layouts')
+    # A browser without full screen remains playable, with a home-screen path.
+    fallback=browser.new_context(viewport={'width':844,'height':390},is_mobile=True,has_touch=True)
+    fallback.add_init_script("Object.defineProperty(Element.prototype,'requestFullscreen',{value:undefined,configurable:true});Object.defineProperty(Element.prototype,'webkitRequestFullscreen',{value:undefined,configurable:true});")
+    fp=fallback.new_page();fp.on('pageerror',lambda e:errors.append(str(e)))
+    fp.on('requestfailed',lambda r:failures.append({'url':r.url,'failure':r.failure}))
+    fp.goto(URL+'?test=1',wait_until='networkidle');fp.wait_for_function("document.body.dataset.ready==='true'",timeout=60000)
+    fp.locator('#start').tap();assert fp.evaluate("window.kuchiGame.mode==='playing' && document.fullscreenElement===null")
+    fp.locator('#pause-toggle').tap();assert fp.locator('#fullscreen-note').is_visible()
+    manifest=fp.evaluate("fetch('manifest.webmanifest').then(r=>r.json())")
+    assert manifest['display']=='fullscreen' and manifest['orientation']=='landscape'
+    for icon in manifest['icons']:
+        width=fp.evaluate("src=>new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i.naturalWidth);i.onerror=reject;i.src=src})",icon['src'])
+        assert width==int(icon['sizes'].split('x')[0])
+    fp.screenshot(path=str(OUTPUT/'mobile-fullscreen-fallback.png'))
+    fallback.close();record('mobile/fullscreen-unavailable/home-screen-manifest/icons')
 
 def main():
     OUTPUT.mkdir(parents=True,exist_ok=True)

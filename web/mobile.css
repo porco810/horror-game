@@ -27,24 +27,23 @@
   .mobile-guide { display: block; }
   .desktop-guide { display: none; }
   #touch-controls { display: block; position: absolute; inset: 0; pointer-events: none; user-select: none; -webkit-user-select: none; }
-  .pad-wrap { position: absolute; bottom: var(--safe-bottom); width: 112px; }
+  .pad-wrap { position: absolute; bottom: var(--safe-bottom); width: 176px; }
   .move-pad-wrap { left: var(--safe-left); }
   .look-pad-wrap { right: var(--safe-right); }
   .pad-label { display: block; text-align: center; font-size: 10px; letter-spacing: .22em; margin-bottom: 9px; color: #b5c1a4; text-shadow: 0 2px 6px #000; }
-  #joystick, #look-pad { position: relative; inset: auto; width: 112px; height: 112px; border: 1px solid #c1cfaa55; border-radius: 50%; background: #10241b80; pointer-events: auto; touch-action: none; }
+  #joystick, #look-pad { position: relative; inset: auto; width: 112px; height: 112px; margin: auto; border: 1px solid #c1cfaa55; border-radius: 50%; background: #10241b80; pointer-events: auto; touch-action: none; }
   .touch-pad.active { border-color: #d0c193; background: #35453099; }
   #joystick-knob, #look-pad-knob { position: absolute; width: 40px; height: 40px; left: 35px; top: 35px; border: 1px solid #b4c29b99; border-radius: 50%; background: #99aa7960; pointer-events: none; }
   .pad-axis::before, .pad-axis::after { content: ''; position: absolute; background: #b3c59d30; pointer-events: none; }
   .pad-axis::before { width: 1px; height: 74px; top: 18px; left: 55px; }
   .pad-axis::after { height: 1px; width: 74px; left: 18px; top: 55px; }
-  .touch-dock { position: absolute; bottom: var(--safe-bottom); left: 50%; transform: translateX(-50%); width: 264px; }
-  .touch-actions, .movement-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-  .movement-modes { margin-top: 8px; }
-  .touch-dock button, #touch-fullscreen { min-height: 44px; font-size: 11px; border: 1px solid #9fac8260; border-radius: 6px; background: #122019e6; color: #d6dac0; touch-action: manipulation; }
-  .touch-actions button { min-height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
-  .touch-actions small { font-size: 9px; color: #a6b490; }
-  .touch-actions button:disabled { opacity: .45; cursor: default; }
-  .movement-modes button[aria-pressed=true] { border-color: #d0c193; background: #706a3bd9; color: #f2e7c3; }
+  .pad-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
+  .pad-controls button, #touch-fullscreen { min-height: 44px; font-size: 11px; border: 1px solid #9fac8260; border-radius: 6px; background: #122019e6; color: #d6dac0; touch-action: manipulation; }
+  .pad-controls button { min-height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+  .pad-controls small { font-size: 9px; color: #a6b490; }
+  .pad-controls button:disabled { opacity: .45; cursor: default; }
+  #touch-mode[data-mode=run] { border-color: #d0c193; background: #706a3bd9; color: #f2e7c3; }
+  #touch-mode[data-mode=crouch] { border-color: #9fb7bb; background: #31454bd9; }
   #touch-fullscreen { position: absolute; right: var(--safe-right); top: calc(var(--safe-top) + 54px); min-width: 64px; }
   .hud-top { top: var(--safe-top); left: var(--safe-left); right: var(--safe-right); gap: 10px; }
   .quest { max-width: min(36%, 280px); }
@@ -71,6 +70,14 @@
   .journal-layout { grid-template-columns: minmax(150px, 210px) minmax(0, 1fr); gap: 22px; }
   .journal-layout > div:first-child { width: 100%; margin: 0; }
   .journal-card h2 { font-size: 23px; }
+}
+
+@media (pointer: coarse) and (max-height: 360px) {
+  .pad-wrap { width: 160px; }
+  #joystick, #look-pad { width: 96px; height: 96px; }
+  #joystick-knob, #look-pad-knob { width: 36px; height: 36px; left: 29px; top: 29px; }
+  .pad-axis::before { height: 62px; top: 16px; left: 47px; }
+  .pad-axis::after { width: 62px; left: 16px; top: 47px; }
 }
 
 @media (pointer: coarse) and (orientation: landscape) and (max-height: 600px) {

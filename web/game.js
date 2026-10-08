@@ -9,7 +9,7 @@ const $=s=>document.querySelector(s),canvas=$('#game-canvas');
 const testMode=new URLSearchParams(location.search).get('test')==='1';
 const keys=new Set(),touch={x:0,z:0,lookX:0,lookY:0,running:false,crouching:false};
 const coarsePointer=matchMedia('(pointer:coarse)'),portraitScreen=matchMedia('(orientation:portrait)');
-let orientationBlocked=coarsePointer.matches&&portraitScreen.matches,resetPads=()=>{};
+let orientationBlocked=coarsePointer.matches&&portraitScreen.matches,resetPads=()=>{},fullscreenPending=false;
 let mode='title',started=false,settingsReturn='title',journalReturn='playing',ready=false;
 let progress=freshProgress(),savedInMemory=null,selected='kagura_bell',stamina=1,exhausted=false,bellCooldown=0;
 let subtitleUntil=0,toastUntil=0,time=0,renderTime=0,focused=null,lastState='',projectiles=[],dropped=[];
@@ -98,6 +98,7 @@ function begin(continuing=false,lock=true){
   synchronizeEntities();refreshHUD();setMode('playing');updateCamera(0);save();
   subtitle(continuing?'灯りは、まだ消えていない。':'南の門は閉ざされている。入口の置き手紙を読もう。',7);
   audio.start().catch(()=>toast('音を再生できませんでした。設定から音量を確認してください。'));
+  if(coarsePointer.matches)requestLandscape();
   if(lock)requestLook();
 }
 function requestLook(){
@@ -105,7 +106,7 @@ function requestLook(){
   try{const promise=canvas.requestPointerLock();promise?.catch(()=>{$('#look-hint').hidden=false;});}catch{$('#look-hint').hidden=false;}
 }
 function pause(){if(mode==='playing'){save();setMode('paused');}}
-function resume(){setMode('playing');requestLook();}
+function resume(){setMode('playing');if(coarsePointer.matches)requestLandscape();requestLook();}
 function returnTitle(){if(started&&mode!=='won')save();started=false;setMode('title');$('#danger-shade').style.opacity=0;}
 function openJournal(){journalReturn=mode==='paused'?'paused':'playing';drawJournal();setMode('journal');}
 function openSettings(){settingsReturn=mode==='title'?'title':'paused';setMode('settings');}
@@ -119,14 +120,37 @@ function updateOrientation(){
   keys.clear();resetPads();player.running=player.moving=false;
   if(orientationBlocked&&mode==='playing')save();
 }
-async function requestLandscape(){
+function fullscreenElement(){return document.fullscreenElement||document.webkitFullscreenElement;}
+function installedDisplay(){return navigator.standalone===true||matchMedia('(display-mode:standalone)').matches||matchMedia('(display-mode:fullscreen)').matches&&!fullscreenElement();}
+function refreshFullscreen(){
+  $('#touch-fullscreen').hidden=installedDisplay();
+  $('#touch-fullscreen').textContent=fullscreenElement()?'縮小':'全画面';
+  $('#touch-fullscreen').setAttribute('aria-label',fullscreenElement()?'全画面を解除して一時停止':'全画面にする');
+  $('#fullscreen-note').hidden=Boolean(fullscreenElement()||installedDisplay());
+}
+async function requestLandscape(showHelp=false){
+  if(fullscreenPending)return;
   try{
-    if(!document.fullscreenElement){
-      if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();
-      else document.documentElement.webkitRequestFullscreen?.();
+    if(!fullscreenElement()&&!installedDisplay()){
+      const root=document.documentElement;
+      if(root.requestFullscreen){fullscreenPending=true;await root.requestFullscreen({navigationUI:'hide'});}
+      else if(root.webkitRequestFullscreen){fullscreenPending=true;await root.webkitRequestFullscreen();}
+      else if(showHelp)toast('「ホーム画面に追加」して起動すると、ツールバーなしで遊べます。',7);
     }
-    if(screen.orientation?.lock)await screen.orientation.lock('landscape');
-  }catch{/* Rotation remains manual on browsers that do not support locking. */}
+  }catch{if(showHelp)toast('全画面にできない場合は「ホーム画面に追加」から起動してください。',7);}
+  finally{fullscreenPending=false;}
+  try{if(screen.orientation?.lock)await screen.orientation.lock('landscape');}catch{/* Unsupported browsers keep manual rotation. */}
+  refreshFullscreen();
+}
+async function toggleFullscreen(){
+  if(!fullscreenElement()){requestLandscape(true);return;}
+  pause();
+  try{
+    if(document.exitFullscreen)await document.exitFullscreen();
+    else document.webkitExitFullscreen?.();
+    screen.orientation?.unlock?.();
+  }catch{}
+  refreshFullscreen();
 }
 function drawJournal(){
   const list=$('#notes-list');list.replaceChildren();
@@ -251,8 +275,8 @@ function simulate(dt){
   if(mode!=='playing'||orientationBlocked)return;time+=dt;progress.elapsed+=dt;bellCooldown=Math.max(0,bellCooldown-dt);
   let side=(keys.has('KeyD')?1:0)-(keys.has('KeyA')?1:0)+touch.x,forward=(keys.has('KeyW')||keys.has('ArrowUp')?1:0)-(keys.has('KeyS')||keys.has('ArrowDown')?1:0)-touch.z;
   if(keys.has('ArrowLeft'))player.yaw+=dt*1.6;if(keys.has('ArrowRight'))player.yaw-=dt*1.6;
-  player.yaw-=touch.lookX*dt*1.9*settings.sensitivity;
-  player.pitch=clamp(player.pitch-touch.lookY*dt*1.5*settings.sensitivity,-1.25,1.1);
+  player.yaw-=touch.lookX*dt*1.1*settings.sensitivity;
+  player.pitch=clamp(player.pitch-touch.lookY*dt*.85*settings.sensitivity,-1.25,1.1);
   player.crouching=touch.crouching||keys.has('ControlLeft')||keys.has('ControlRight');
   const magnitude=Math.hypot(side,forward);if(magnitude>1){side/=magnitude;forward/=magnitude;}
   player.moving=magnitude>.08;player.running=player.moving&&!player.crouching&&!exhausted&&stamina>.02&&(touch.running||keys.has('ShiftLeft')||keys.has('ShiftRight'));
@@ -278,18 +302,26 @@ function applySettings(){
 }
 function wireUI(){
   for(const id of ['inventory','mobile-inventory'])ITEM_ORDER.forEach((item,index)=>{const b=document.createElement('button');b.dataset.item=item;b.innerHTML=`<kbd>${index+1}</kbd><span class="item-glyph">${ITEMS[item].glyph}</span><span class="item-name">${id==='inventory'?ITEMS[item].short:ITEMS[item].name}</span><span class="item-count">—</span>`;b.addEventListener('click',()=>{selected=item;refreshHUD();if(mode==='inventory')resume();});$('#'+id).append(b);});
-  const actions={'#start':()=>begin(false),'#continue':()=>begin(true),'#resume':resume,'#pause-toggle':pause,'#return-title':returnTitle,'#end-return':returnTitle,'#retry':()=>begin(mode!=='won'),'#journal-toggle':openJournal,'#pause-journal':openJournal,'#close-journal':()=>{setMode(journalReturn);if(mode==='playing')requestLook();},'#title-settings':openSettings,'#pause-settings':openSettings,'#close-settings':()=>setMode(settingsReturn),'#torch-toggle':toggleTorch,'#touch-interact':interact,'#touch-offer':offer,'#inventory-toggle':openInventory,'#close-inventory':resume,'#touch-fullscreen':requestLandscape,'#rotate-fullscreen':requestLandscape,'#reload':()=>location.reload()};
+  const actions={'#start':()=>begin(false),'#continue':()=>begin(true),'#resume':resume,'#pause-toggle':pause,'#return-title':returnTitle,'#end-return':returnTitle,'#retry':()=>begin(mode!=='won'),'#journal-toggle':openJournal,'#pause-journal':openJournal,'#close-journal':()=>{setMode(journalReturn);if(mode==='playing')requestLook();},'#title-settings':openSettings,'#pause-settings':openSettings,'#close-settings':()=>setMode(settingsReturn),'#torch-toggle':toggleTorch,'#touch-interact':interact,'#touch-offer':offer,'#inventory-toggle':openInventory,'#close-inventory':resume,'#touch-fullscreen':toggleFullscreen,'#rotate-fullscreen':()=>requestLandscape(true),'#reload':()=>location.reload()};
   for(const [selector,handler] of Object.entries(actions))$(selector).addEventListener('click',handler);
   for(const key of Object.keys(settings)){
     const element=$('#'+({reduceMotion:'reduce-motion'}[key]||key));if(!element)continue;
     if(element.type==='checkbox')element.checked=settings[key];else element.value=settings[key];
     element.addEventListener('input',()=>{settings[key]=element.type==='checkbox'?element.checked:element.type==='range'?Number(element.value):element.value;applySettings();try{localStorage.setItem('kuchi-kagura-settings-v1',JSON.stringify(settings));}catch{}});
   }
-  $('#touch-walk').addEventListener('click',()=>{touch.running=touch.crouching=false;refreshTouch();});
-  $('#touch-run').addEventListener('click',()=>{touch.running=!touch.running;touch.crouching=false;refreshTouch();});
-  $('#touch-crouch').addEventListener('click',()=>{touch.crouching=!touch.crouching;touch.running=false;refreshTouch();});
+  $('#touch-mode').addEventListener('click',()=>{
+    if(touch.crouching)touch.running=touch.crouching=false;
+    else if(touch.running){touch.running=false;touch.crouching=true;}
+    else touch.running=true;
+    refreshTouch();
+  });
+  refreshFullscreen();
 }
-function refreshTouch(){$('#touch-walk').setAttribute('aria-pressed',String(!touch.running&&!touch.crouching));$('#touch-run').setAttribute('aria-pressed',String(touch.running));$('#touch-crouch').setAttribute('aria-pressed',String(touch.crouching));}
+function refreshTouch(){
+  const mode=touch.crouching?'crouch':touch.running?'run':'walk',label={walk:'歩く',run:'走る',crouch:'屈む'}[mode],next={walk:'走る',run:'屈む',crouch:'歩く'}[mode];
+  $('#touch-mode').dataset.mode=mode;$('#touch-mode-label').textContent=label;
+  $('#touch-mode').setAttribute('aria-label',`現在は${label}。タップで${next}に切り替え`);
+}
 function wireInput(){
   addEventListener('keydown',e=>{
     if(e.code==='Escape'){
@@ -305,6 +337,12 @@ function wireInput(){
   addEventListener('keyup',e=>keys.delete(e.code));
   addEventListener('blur',()=>{keys.clear();resetPads();if(mode==='playing')pause();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='playing')pause();});
+  function fullscreenChanged(){
+    const active=Boolean(fullscreenElement());
+    if(!active&&!fullscreenPending&&mode==='playing')pause();
+    refreshFullscreen();
+  }
+  document.addEventListener('fullscreenchange',fullscreenChanged);document.addEventListener('webkitfullscreenchange',fullscreenChanged);
   let wasLocked=false,drag=null;
   document.addEventListener('pointerlockchange',()=>{const locked=document.pointerLockElement===canvas;if(wasLocked&&!locked&&mode==='playing')pause();wasLocked=locked;$('#look-hint').hidden=locked;});
   document.addEventListener('pointerlockerror',()=>{$('#look-hint').hidden=false;});
