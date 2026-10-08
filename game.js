@@ -2,11 +2,14 @@ import * as THREE from 'three';
 import {KuchikaguraController} from './character-controller.js';
 import {createVillage,makeOffering} from './world.js';
 import {VillageAudio} from './audio.js';
+import {attachTouchPad} from './touch-pad.js';
 import {ITEMS,ITEM_ORDER,NOTES,SEALS,SAVE_KEY,SPAWN,freshProgress,parseProgress,VillageNavigation,PursuerAI,clamp,distance} from './gameplay.js';
 
 const $=s=>document.querySelector(s),canvas=$('#game-canvas');
 const testMode=new URLSearchParams(location.search).get('test')==='1';
-const keys=new Set(),touch={x:0,z:0,running:false,crouching:false};
+const keys=new Set(),touch={x:0,z:0,lookX:0,lookY:0,running:false,crouching:false};
+const coarsePointer=matchMedia('(pointer:coarse)'),portraitScreen=matchMedia('(orientation:portrait)');
+let orientationBlocked=coarsePointer.matches&&portraitScreen.matches,resetPads=()=>{};
 let mode='title',started=false,settingsReturn='title',journalReturn='playing',ready=false;
 let progress=freshProgress(),savedInMemory=null,selected='kagura_bell',stamina=1,exhausted=false,bellCooldown=0;
 let subtitleUntil=0,toastUntil=0,time=0,renderTime=0,focused=null,lastState='',projectiles=[],dropped=[];
@@ -30,15 +33,16 @@ function updateReactionProp(){
 }
 function showError(error){ready=false;setMode('error');$('#error-message').textContent=error.message;console.error(error);}
 function setMode(next){
-  mode=next;keys.clear();touch.x=touch.z=0;player.running=player.moving=false;
-  for(const id of ['title','pause','settings','journal','end','error'])$('#'+id+'-screen').hidden=!(next===id||id==='pause'&&next==='paused'||id==='end'&&['dead','won'].includes(next));
+  mode=next;keys.clear();resetPads();player.running=player.moving=false;
+  for(const id of ['title','pause','settings','journal','inventory','end','error'])$('#'+id+'-screen').hidden=!(next===id||id==='pause'&&next==='paused'||id==='end'&&['dead','won'].includes(next));
   $('#hud').hidden=!started||['title','dead','won','error'].includes(next);
-  $('#hud').inert=next!=='playing';
-  audio.setPaused(next!=='playing');
+  $('#hud').inert=next!=='playing'||orientationBlocked;
+  $('#inventory-toggle').setAttribute('aria-expanded',String(next==='inventory'));
+  audio.setPaused(next!=='playing'||orientationBlocked);
   if(next!=='playing'&&document.pointerLockElement===canvas)document.exitPointerLock();
   if(next==='playing')$('#look-hint').hidden=document.pointerLockElement===canvas||matchMedia('(pointer:coarse)').matches;
   if(next==='title')updateContinue();
-  const focus={paused:'#resume',journal:'#close-journal',settings:'#close-settings',dead:'#retry',won:'#retry',title:'#start'}[next];
+  const focus={paused:'#resume',journal:'#close-journal',inventory:'#close-inventory',settings:'#close-settings',dead:'#retry',won:'#retry',title:'#start'}[next];
   if(focus)$(focus).focus({preventScroll:true});
   document.body.dataset.mode=next;
 }
@@ -56,10 +60,18 @@ function refreshHUD(){
   $('#objective').textContent=objective();$('#seal-count').textContent=`${progress.seals.length} / 3`;
   $('#seal-progress').setAttribute('aria-label',`鎮め札 ${progress.seals.length} / 3`);
   [...$('#seal-progress').querySelectorAll('span')].forEach((s,i)=>s.classList.toggle('found',progress.seals.includes(SEALS[i])));
-  for(const b of $('#inventory').children){const item=b.dataset.item,count=progress.inventory[item];b.classList.toggle('empty',!count);b.classList.toggle('selected',item===selected);b.setAttribute('aria-pressed',String(item===selected));b.querySelector('.item-count').textContent=count?item==='kagura_bell'?'∞':count:'—';b.setAttribute('aria-label',`${ITEMS[item].name} ${count?item==='kagura_bell'?'所持':count+'個':'未所持'}`);}
+  for(const b of document.querySelectorAll('#inventory button, #mobile-inventory button')){const item=b.dataset.item,count=progress.inventory[item];b.classList.toggle('empty',!count);b.classList.toggle('selected',item===selected);b.setAttribute('aria-pressed',String(item===selected));b.querySelector('.item-count').textContent=count?item==='kagura_bell'?'∞':count:'—';b.setAttribute('aria-label',`${ITEMS[item].name} ${count?item==='kagura_bell'?'所持':count+'個':'未所持'}`);if(b.parentElement.id==='mobile-inventory')b.disabled=!count;}
   refreshSelected();
 }
-function refreshSelected(){const owned=progress.inventory[selected]>0;$('#selected-hint').textContent=!owned?`${ITEMS[selected].name}を探す`:selected==='kagura_bell'?bellCooldown>0?`鈴の余韻 · あと ${Math.ceil(bellCooldown)} 秒`:'R ／ G で鳴らす · 手に持ったまま':`G で ${ITEMS[selected].name}を手向ける · 怪異の近くへ` ;}
+function refreshSelected(){
+  const count=progress.inventory[selected],owned=count>0,bell=selected==='kagura_bell';
+  $('#selected-hint').textContent=!owned?`${ITEMS[selected].name}を探す`:bell?bellCooldown>0?`鈴の余韻 · あと ${Math.ceil(bellCooldown)} 秒`:'R ／ G で鳴らす · 手に持ったまま':`G で ${ITEMS[selected].name}を手向ける · 怪異の近くへ`;
+  $('#touch-selected').textContent=owned?ITEMS[selected].short:'選ぶ';
+  $('#touch-offer-label').textContent=bell?'鈴を鳴らす':'手向ける';
+  $('#touch-offer-hint').textContent=!owned?'未所持':bell?bellCooldown>0?`あと ${Math.ceil(bellCooldown)} 秒`:'何度でも':`${ITEMS[selected].short} × ${count}`;
+  $('#touch-offer').disabled=!owned||(bell&&bellCooldown>0);
+  $('#touch-offer').setAttribute('aria-label',owned?bell?'神楽鈴を鳴らす':`${ITEMS[selected].name}を手向ける`:'品物を選んでください');
+}
 function synchronizeEntities(){
   for(const e of world.entities){
     if(e.type==='key')e.object.visible=progress.unlocked&&!progress.key;
@@ -73,14 +85,14 @@ function addDropped(data,object=null){
   const e={...data,type:'dropped',y:.08,object:o};dropped.push(e);return e;
 }
 function begin(continuing=false,lock=true){
-  if(!ready)return;
+  if(!ready||orientationBlocked)return;
   progress=continuing?(readSave()||freshProgress()):freshProgress();
   // Reject checkpoints made inaccessible by an older save or changed map.
   if(!nav.free(progress.checkpoint))progress.checkpoint={...SPAWN};
   Object.assign(player,progress.checkpoint,{yaw:0,pitch:0,flashlight:true,running:false,crouching:false,moving:false});
   started=true;stamina=1;exhausted=false;bellCooldown=0;time=progress.elapsed;touch.running=touch.crouching=false;
   audio.resetClock();
-  $('#touch-run').setAttribute('aria-pressed','false');$('#touch-crouch').setAttribute('aria-pressed','false');
+  refreshTouch();$('#torch-toggle').setAttribute('aria-pressed','true');
   clearProjectiles();setReactionProp(null);for(const d of progress.dropped)addDropped(d);
   enemy.reset();controller.play('idle',{fade:0});selected=progress.inventory.kagura_bell?'kagura_bell':ITEM_ORDER.find(k=>progress.inventory[k])||'kagura_bell';
   synchronizeEntities();refreshHUD();setMode('playing');updateCamera(0);save();
@@ -97,6 +109,25 @@ function resume(){setMode('playing');requestLook();}
 function returnTitle(){if(started&&mode!=='won')save();started=false;setMode('title');$('#danger-shade').style.opacity=0;}
 function openJournal(){journalReturn=mode==='paused'?'paused':'playing';drawJournal();setMode('journal');}
 function openSettings(){settingsReturn=mode==='title'?'title':'paused';setMode('settings');}
+function openInventory(){if(mode!=='playing')return;refreshHUD();setMode('inventory');}
+function updateOrientation(){
+  orientationBlocked=coarsePointer.matches&&portraitScreen.matches;
+  $('#orientation-screen').hidden=!orientationBlocked;
+  $('#hud').inert=mode!=='playing'||orientationBlocked;
+  for(const element of document.querySelectorAll('.screen:not(#orientation-screen)'))element.inert=orientationBlocked;
+  audio.setPaused(mode!=='playing'||orientationBlocked);
+  keys.clear();resetPads();player.running=player.moving=false;
+  if(orientationBlocked&&mode==='playing')save();
+}
+async function requestLandscape(){
+  try{
+    if(!document.fullscreenElement){
+      if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();
+      else document.documentElement.webkitRequestFullscreen?.();
+    }
+    if(screen.orientation?.lock)await screen.orientation.lock('landscape');
+  }catch{/* Rotation remains manual on browsers that do not support locking. */}
+}
 function drawJournal(){
   const list=$('#notes-list');list.replaceChildren();
   if(!progress.notes.length){const p=document.createElement('p');p.className='empty-notes';p.textContent='まだ、誰の言葉も拾っていない。入口の置き手紙を探そう。';list.append(p);}
@@ -194,6 +225,8 @@ function findFocus(){
     const score=d+(1-dot)*2;if(score<best){focused=e;best=score;}
   }
   $('#interaction').hidden=!focused;$('#crosshair').classList.toggle('active',Boolean(focused));
+  $('#touch-interact').disabled=!focused;
+  $('#touch-interact').textContent=!focused?'調べる':focused.type==='note'?'読む':['item','dropped','seal','key'].includes(focused.type)?'拾う':focused.type==='altar'?'札を納める':progress.key?'門を開く':'調べる';
   if(focused){const e=focused;$('#interaction-text').textContent=e.type==='note'?NOTES[e.note].title+'を読む':e.type==='item'||e.type==='dropped'?ITEMS[e.item].name+'を拾う':e.type==='seal'?'鎮め札を拾う':e.type==='altar'?'祭壇へ札を納める':e.type==='key'?'境の鍵を受け取る':progress.key?'境の門を開ける':'境の門を調べる';}
 }
 function updateCamera(dt){
@@ -215,9 +248,11 @@ function finish(won){
   setMode(won?'won':'dead');
 }
 function simulate(dt){
-  if(mode!=='playing')return;time+=dt;progress.elapsed+=dt;bellCooldown=Math.max(0,bellCooldown-dt);
+  if(mode!=='playing'||orientationBlocked)return;time+=dt;progress.elapsed+=dt;bellCooldown=Math.max(0,bellCooldown-dt);
   let side=(keys.has('KeyD')?1:0)-(keys.has('KeyA')?1:0)+touch.x,forward=(keys.has('KeyW')||keys.has('ArrowUp')?1:0)-(keys.has('KeyS')||keys.has('ArrowDown')?1:0)-touch.z;
   if(keys.has('ArrowLeft'))player.yaw+=dt*1.6;if(keys.has('ArrowRight'))player.yaw-=dt*1.6;
+  player.yaw-=touch.lookX*dt*1.9*settings.sensitivity;
+  player.pitch=clamp(player.pitch-touch.lookY*dt*1.5*settings.sensitivity,-1.25,1.1);
   player.crouching=touch.crouching||keys.has('ControlLeft')||keys.has('ControlRight');
   const magnitude=Math.hypot(side,forward);if(magnitude>1){side/=magnitude;forward/=magnitude;}
   player.moving=magnitude>.08;player.running=player.moving&&!player.crouching&&!exhausted&&stamina>.02&&(touch.running||keys.has('ShiftLeft')||keys.has('ShiftRight'));
@@ -242,31 +277,33 @@ function applySettings(){
   audio.setVolume(settings.volume);if(enemy)enemy.difficulty=settings.difficulty;
 }
 function wireUI(){
-  ITEM_ORDER.forEach((item,index)=>{const b=document.createElement('button');b.dataset.item=item;b.innerHTML=`<kbd>${index+1}</kbd><span class="item-glyph">${ITEMS[item].glyph}</span><span class="item-name">${ITEMS[item].short}</span><span class="item-count">—</span>`;b.addEventListener('click',()=>{selected=item;refreshHUD();});$('#inventory').append(b);});
-  const actions={'#start':()=>begin(false),'#continue':()=>begin(true),'#resume':resume,'#pause-toggle':pause,'#return-title':returnTitle,'#end-return':returnTitle,'#retry':()=>begin(mode!=='won'),'#journal-toggle':openJournal,'#pause-journal':openJournal,'#close-journal':()=>{setMode(journalReturn);if(mode==='playing')requestLook();},'#title-settings':openSettings,'#pause-settings':openSettings,'#close-settings':()=>setMode(settingsReturn),'#torch-toggle':toggleTorch,'#touch-interact':interact,'#touch-offer':offer,'#reload':()=>location.reload()};
+  for(const id of ['inventory','mobile-inventory'])ITEM_ORDER.forEach((item,index)=>{const b=document.createElement('button');b.dataset.item=item;b.innerHTML=`<kbd>${index+1}</kbd><span class="item-glyph">${ITEMS[item].glyph}</span><span class="item-name">${id==='inventory'?ITEMS[item].short:ITEMS[item].name}</span><span class="item-count">—</span>`;b.addEventListener('click',()=>{selected=item;refreshHUD();if(mode==='inventory')resume();});$('#'+id).append(b);});
+  const actions={'#start':()=>begin(false),'#continue':()=>begin(true),'#resume':resume,'#pause-toggle':pause,'#return-title':returnTitle,'#end-return':returnTitle,'#retry':()=>begin(mode!=='won'),'#journal-toggle':openJournal,'#pause-journal':openJournal,'#close-journal':()=>{setMode(journalReturn);if(mode==='playing')requestLook();},'#title-settings':openSettings,'#pause-settings':openSettings,'#close-settings':()=>setMode(settingsReturn),'#torch-toggle':toggleTorch,'#touch-interact':interact,'#touch-offer':offer,'#inventory-toggle':openInventory,'#close-inventory':resume,'#touch-fullscreen':requestLandscape,'#rotate-fullscreen':requestLandscape,'#reload':()=>location.reload()};
   for(const [selector,handler] of Object.entries(actions))$(selector).addEventListener('click',handler);
   for(const key of Object.keys(settings)){
     const element=$('#'+({reduceMotion:'reduce-motion'}[key]||key));if(!element)continue;
     if(element.type==='checkbox')element.checked=settings[key];else element.value=settings[key];
     element.addEventListener('input',()=>{settings[key]=element.type==='checkbox'?element.checked:element.type==='range'?Number(element.value):element.value;applySettings();try{localStorage.setItem('kuchi-kagura-settings-v1',JSON.stringify(settings));}catch{}});
   }
-  $('#touch-run').addEventListener('click',()=>{touch.running=!touch.running;if(touch.running)touch.crouching=false;refreshTouch();});$('#touch-crouch').addEventListener('click',()=>{touch.crouching=!touch.crouching;if(touch.crouching)touch.running=false;refreshTouch();});
+  $('#touch-walk').addEventListener('click',()=>{touch.running=touch.crouching=false;refreshTouch();});
+  $('#touch-run').addEventListener('click',()=>{touch.running=!touch.running;touch.crouching=false;refreshTouch();});
+  $('#touch-crouch').addEventListener('click',()=>{touch.crouching=!touch.crouching;touch.running=false;refreshTouch();});
 }
-function refreshTouch(){$('#touch-run').setAttribute('aria-pressed',String(touch.running));$('#touch-crouch').setAttribute('aria-pressed',String(touch.crouching));}
+function refreshTouch(){$('#touch-walk').setAttribute('aria-pressed',String(!touch.running&&!touch.crouching));$('#touch-run').setAttribute('aria-pressed',String(touch.running));$('#touch-crouch').setAttribute('aria-pressed',String(touch.crouching));}
 function wireInput(){
   addEventListener('keydown',e=>{
     if(e.code==='Escape'){
-      if(mode==='playing')pause();else if(mode==='paused')resume();else if(mode==='journal')setMode(journalReturn);else if(mode==='settings')setMode(settingsReturn);return;
+      if(mode==='playing')pause();else if(mode==='paused'||mode==='inventory')resume();else if(mode==='journal')setMode(journalReturn);else if(mode==='settings')setMode(settingsReturn);return;
     }
     if(e.code==='Tab'&&['playing','journal'].includes(mode)){e.preventDefault();if(e.repeat)return;if(mode==='journal')setMode(journalReturn);else openJournal();return;}
-    if(mode!=='playing')return;
+    if(mode!=='playing'||orientationBlocked)return;
     if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','ControlLeft','ControlRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.repeat)return;
     if(e.code==='KeyE')interact();if(e.code==='KeyF')toggleTorch();if(e.code==='KeyG')offer();if(e.code==='KeyR')ring();if(e.code==='KeyP')pause();
     if(e.code==='KeyC'){touch.crouching=!touch.crouching;touch.running=false;refreshTouch();}
     if(/^Digit[1-6]$/.test(e.code)){selected=ITEM_ORDER[Number(e.code.slice(-1))-1];refreshHUD();}
   });
   addEventListener('keyup',e=>keys.delete(e.code));
-  addEventListener('blur',()=>{keys.clear();touch.x=touch.z=0;if(mode==='playing')pause();});
+  addEventListener('blur',()=>{keys.clear();resetPads();if(mode==='playing')pause();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='playing')pause();});
   let wasLocked=false,drag=null;
   document.addEventListener('pointerlockchange',()=>{const locked=document.pointerLockElement===canvas;if(wasLocked&&!locked&&mode==='playing')pause();wasLocked=locked;$('#look-hint').hidden=locked;});
@@ -276,16 +313,17 @@ function wireInput(){
   canvas.addEventListener('pointerdown',e=>{
     if(mode!=='playing')return;
     if(document.pointerLockElement===canvas){if(e.button===0)offer();return;}
-    if(e.pointerType==='touch'&&e.clientX<innerWidth*.35)return;
+    if(e.pointerType==='touch')return;
     drag={id:e.pointerId,x:e.clientX,y:e.clientY,moved:false,touch:e.pointerType==='touch'};canvas.setPointerCapture(e.pointerId);
   });
   canvas.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id||mode!=='playing')return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)>1)drag.moved=true;look(dx,dy);drag.x=e.clientX;drag.y=e.clientY;});
   canvas.addEventListener('pointerup',()=>{if(drag&&!drag.moved&&!drag.touch)requestLook();drag=null;});canvas.addEventListener('pointercancel',()=>drag=null);
-  const joystick=$('#joystick');let stickId=null;
-  function moveStick(e){const b=joystick.getBoundingClientRect(),dx=(e.clientX-b.x-b.width/2)/35,dz=(e.clientY-b.y-b.height/2)/35,mag=Math.max(1,Math.hypot(dx,dz));touch.x=dx/mag;touch.z=dz/mag;$('#joystick-knob').style.transform=`translate(${touch.x*30}px,${touch.z*30}px)`;}
-  joystick.addEventListener('pointerdown',e=>{if(mode!=='playing')return;stickId=e.pointerId;joystick.setPointerCapture(e.pointerId);moveStick(e);});joystick.addEventListener('pointermove',e=>{if(e.pointerId===stickId)moveStick(e);});
-  function stopStick(){stickId=null;touch.x=touch.z=0;$('#joystick-knob').style.transform='';}
-  joystick.addEventListener('pointerup',stopStick);joystick.addEventListener('pointercancel',stopStick);
+  const canUse=()=>mode==='playing'&&!orientationBlocked;
+  const resetMove=attachTouchPad($('#joystick'),canUse,(x,z)=>{touch.x=x;touch.z=z;});
+  const resetLook=attachTouchPad($('#look-pad'),canUse,(x,y)=>{touch.lookX=x;touch.lookY=y;});
+  resetPads=()=>{resetMove();resetLook();};
+  coarsePointer.addEventListener('change',updateOrientation);portraitScreen.addEventListener('change',updateOrientation);
+  updateOrientation();
   // Keep keyboard focus inside active modal dialogs, with Escape as the exit.
   document.addEventListener('keydown',e=>{if(e.code!=='Tab'||mode==='playing')return;const dialog=document.querySelector('.overlay:not([hidden])');if(!dialog)return;const elements=[...dialog.querySelectorAll('button,input,select,summary,a[href]')].filter(x=>!x.disabled&&x.offsetParent!==null);if(!elements.length)return;const first=elements[0],last=elements.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}});
 }
@@ -305,7 +343,7 @@ async function boot(){
     },onCatch:()=>finish(false),onMemory:()=>{toast(`手向けた思い出 — ${progress.memories.length} / 3`);save();}});
     controller.model.position.set(0,0,-19);
     ready=true;document.body.dataset.ready='true';$('#start').disabled=false;$('#loading-status').textContent='探索の目安 10〜15分 · 自動保存';updateContinue();refreshHUD();
-    addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+    addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);updateOrientation();});
     const clock=new THREE.Clock();
     renderer.setAnimationLoop(()=>{
       const dt=Math.min(clock.getDelta(),.05);renderTime+=dt;
