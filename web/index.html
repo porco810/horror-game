@@ -6,8 +6,8 @@
   <title>朽ち神楽 — 山は、まだ覚えている。</title>
   <meta name="description" content="霧の村を探索し、忘れられた祭祀の記憶を手向ける一人称民俗ホラー。">
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="game.css">
-  <link rel="stylesheet" href="mobile.css">
+  <link rel="stylesheet" href="game.css?v=mobile-2">
+  <link rel="stylesheet" href="mobile.css?v=mobile-2">
   <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/examples/jsm/"}}</script>
 </head>
 <body>
@@ -49,6 +49,6 @@
   <section id="journal-screen" class="screen overlay journal-screen" role="dialog" aria-modal="true" aria-labelledby="journal-title" hidden><div class="journal-card"><header><div><p class="overline">忘れないために。</p><h2 id="journal-title">拾い集めた記憶</h2></div><button id="close-journal" class="close-button" aria-label="手記を閉じる">×</button></header><div class="journal-layout"><div><p class="journal-label">村の見取り図</p><canvas id="village-map" width="360" height="440" aria-label="南に門、北に社、中央に屋敷と井戸と蔵"></canvas><p id="journal-objective" class="map-caption"></p></div><div><div id="notes-list"></div><details class="controls-details"><summary>歩き方と手向け方</summary><p>WASD ／ 矢印キー：移動・見回す<br>マウス ／ 画面ドラッグ：見回す<br>Shift：走る　C：しゃがむ　F：灯り<br>E：調べる・拾う　1〜6：品物を選ぶ<br>G ／ マウス左：品物を投げる<br>R：神楽鈴を鳴らす　Tab：手記　Esc：停止</p><p>写真・かんざし・草履は嘆きを、食べ物は空腹を呼び覚ます。怪異の近くへ投げ、反応しているあいだに離れよう。鈴は持っているだけで何度でも鳴らせる。再び鳴らすまで12秒必要。</p><p>壁や家の陰に隠れ、灯りを消す。しゃがむと気づかれにくい。札を集めたら北の社へ、鍵を受け取ったら南の門へ。</p></details></div></div></div></section>
   <section id="end-screen" class="screen overlay" role="dialog" aria-modal="true" aria-labelledby="end-title" hidden><div class="menu-card ending-card"><p id="end-eyebrow" class="overline"></p><h2 id="end-title"></h2><p id="end-story" class="ending-story"></p><p id="end-stats" class="save-note"></p><button id="retry" class="primary">記憶からやり直す <span>→</span></button><button id="end-return" class="menu-link">表題へ戻る</button></div></section>
   <section id="error-screen" class="screen overlay" role="alert" hidden><div class="menu-card"><h2>村を読み込めませんでした</h2><p id="error-message"></p><p>起動用スクリプトから開き直してください。</p><button id="reload" class="primary">読み込み直す</button></div></section>
-  <script type="module" src="game.js"></script>
+  <script type="module" src="game.js?v=mobile-2"></script>
 </body>
 </html>
