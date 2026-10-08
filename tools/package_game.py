@@ -17,6 +17,7 @@ def main():
                  'OPEN_IN_BLENDER.bat','package.json','package-lock.json','.gitignore']:
         files.append(ROOT/name)
     files.extend(p for p in (ROOT/'web').rglob('*') if p.is_file())
+    files.extend(p for p in (ROOT/'.github').rglob('*') if p.is_file())
     for directory,suffixes in [('blender',{'.py'}),('tools',{'.py','.sh','.cjs'}),('tests',{'.mjs'})]:
         files.extend(p for p in (ROOT/directory).iterdir() if p.is_file() and p.suffix in suffixes)
     for name in ['kuchikagura_game.blend','textures/kuchikagura_atlas_1k.png','build_report.json',

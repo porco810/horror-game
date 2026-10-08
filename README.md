@@ -27,6 +27,9 @@ GitHub の [Settings → Pages](https://github.com/porco810/horror-game/settings
 Source「Deploy from a branch」、Branch「gh-pages / (root)」で配信する設定です。
 ゲームURLは `https://porco810.github.io/horror-game/`、
 キャラクター確認は `https://porco810.github.io/horror-game/character.html` です。
+配信ファイルを更新したら、GitHub Actions の「Publish game」を `gh-pages` で起動して公開できます。
+CLIでは `gh workflow run deploy-pages.yml --ref gh-pages` を使います。
+このワークフローは配信用ファイルのハッシュを確認し、GitHub公式のPagesアクションで公開します。
 
 ### 操作
 
