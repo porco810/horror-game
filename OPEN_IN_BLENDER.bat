@@ -8,5 +8,8 @@ echo ERROR: Blender not found. Add it to PATH or edit BLENDER in this file.
 pause
 exit /b 1
 :FOUND
-if not exist "export\kuchikagura_game.blend" (echo Run BUILD_AND_PREVIEW.bat first.&pause&exit /b 1)
-start "" "%BLENDER%" "%CD%\export\kuchikagura_game.blend"
+set "MODEL=pursuer_glasses.blend"
+if /I "%~1"=="cropped" set "MODEL=pursuer_cropped.blend"
+if /I "%~1"=="original" set "MODEL=kuchikagura_game.blend"
+if not exist "export\%MODEL%" (echo Run BUILD_AND_PREVIEW.bat first.&pause&exit /b 1)
+start "" "%BLENDER%" "%CD%\export\%MODEL%"

@@ -1,4 +1,5 @@
 {
+  "asset": "kuchikagura",
   "status": "passed",
   "triangles": 27904,
   "glb_bytes": 2562092,
@@ -15,5 +16,10 @@
     "ritual"
   ],
   "loop_seams": "passed",
-  "skin_weights": "passed"
+  "skin_weights": "passed",
+  "finite_attributes": "passed",
+  "report_consistency": "passed",
+  "blend_header": "passed",
+  "glb_sha256": "068b85f85849853ae9f107fe5cf13471999969ea86965cd38d42a2c17560eb33",
+  "blend_sha256": "9afa1ca70052d46de1cfe78644e89a9c61823dfea80c5a25c4cddd63dedf20f3"
 }

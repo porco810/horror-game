@@ -3,20 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>朽ち神楽 — 民俗ホラー・キャラクタープレビュー</title>
+  <title>朽ち神楽 — 追跡者の3Dプレビュー</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=portrait-1">
   <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/examples/jsm/"}}</script>
 </head>
 <body>
-  <canvas id="stage" aria-label="朽ち神楽の3Dキャラクター"></canvas>
+  <canvas id="stage" aria-label="追跡キャラクターの3Dプレビュー"></canvas>
   <header class="masthead">
-    <div><p class="eyebrow">山は、まだ覚えている。</p><h1>朽ち神楽</h1><p class="roman">KUCHI KAGURA <span> / CHARACTER STUDY 02</span></p></div>
+    <div><p class="eyebrow">山は、まだ覚えている。</p><h1>朽ち神楽</h1><p class="roman">KUCHI KAGURA <span> / PURSUER STUDIES</span></p></div>
     <div class="build"><span class="live-dot"></span><span id="status" role="status">モデルを読み込み中</span></div>
   </header>
   <aside id="panel">
+    <label class="character-label" for="character">追跡キャラクター</label>
+    <select id="character"><option value="glasses">眼鏡の追跡者</option><option value="cropped">短髪の追跡者</option><option value="kuchikagura">旧朽ち神楽</option></select>
+    <p id="character-description" class="intro">モデルを読み込み中です。</p>
+    <div class="camera-views" aria-label="モデルの見方"><button id="front-camera">正面</button><button id="face-camera">顔を拡大</button><button id="reset-camera">全身</button></div>
     <div class="panel-head"><span class="section-no">01</span><h2>怪異のふるまい</h2><span class="section-en">BEHAVIOR</span></div>
-    <p class="intro">古い祭祀衣装をまとい、村をさまよう追跡者。手向けたものが、残された記憶を呼び起こす。</p>
     <div class="states">
       <button data-state="idle"><span>待機</span><small>IDLE</small></button>
       <button data-state="walk"><span>巡回</span><small>WALK</small></button>
@@ -33,11 +36,11 @@
     <div class="panel-head secondary"><span class="section-no">02</span><h2>手向ける</h2><span class="section-en">OFFERING</span></div>
     <div class="offering"><select id="item" aria-label="投げる品物"><option value="photograph">古い写真</option><option value="hairpin">かんざし</option><option value="child_sandals">子どもの草履</option><option value="onigiri">おにぎり</option><option value="dango">団子</option><option value="kagura_bell">神楽鈴</option></select><button id="offer">投げる ↗</button></div>
     <p id="offering-result" aria-live="polite">記憶の品、食べ物、あるいは鈴の音。</p>
-    <div class="toggles"><label><input id="rotate" type="checkbox">回転展示</label><label><input id="fog" type="checkbox" checked>霧</label><label><input id="studio" type="checkbox">明るい照明</label></div>
+    <div class="toggles"><label><input id="rotate" type="checkbox">回転展示</label><label><input id="fog" type="checkbox">霧</label><label><input id="studio" type="checkbox" checked>スタジオ</label></div>
     <details><summary>アセット仕様</summary><pre id="stats">読み込み中</pre></details>
   </aside>
-  <footer><div class="caption"><span class="red-line"></span><p>記憶を拾うもの。<br><small>日本の因習村を舞台にした、オリジナルの追跡怪異。</small></p></div><p class="controls-hint">ドラッグで回転 <span>/</span> ホイールで拡大 <button id="reset-camera">視点を戻す</button></p></footer>
+  <footer><div class="caption"><span class="red-line"></span><p id="character-caption">記憶を拾うもの。</p></div><p class="controls-hint">ドラッグで回転 <span>/</span> ホイール・ピンチで拡大</p></footer>
   <div id="missing" hidden role="alert"><h2>モデルを読み込めませんでした</h2><p id="load-error">先にモデルを生成してください。</p></div>
-  <script type="module" src="viewer.js"></script>
+  <script type="module" src="viewer.js?v=portrait-1"></script>
 </body>
 </html>

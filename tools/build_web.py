@@ -16,6 +16,10 @@ RUNTIME=[
 def main():
     if not (WEB/'assets/models/kuchikagura.glb').is_file():
         raise SystemExit('Generate the character first: npm run build')
+    missing=[name for name in ('pursuer_glasses.glb','pursuer_cropped.glb')
+             if not (WEB/'assets/models'/name).is_file()]
+    if missing:
+        raise SystemExit('Missing reference pursuers: '+', '.join(missing)+'. Run npm run build:references first.')
     for name in RUNTIME:
         if not (ROOT/'node_modules/three'/name).is_file():
             raise SystemExit('Install the pinned runtime first: npm ci')
@@ -27,7 +31,8 @@ def main():
         shutil.copy2(ROOT/'node_modules/three'/name,target)
     shutil.copy2(ROOT/'THIRD_PARTY_NOTICES.txt',OUTPUT/'THIRD_PARTY_NOTICES.txt')
     files={str(p.relative_to(OUTPUT)):hashlib.sha256(p.read_bytes()).hexdigest()
-           for p in sorted(OUTPUT.rglob('*')) if p.is_file() and p.name!='FILE_HASHES.json'}
+           for p in sorted(OUTPUT.rglob('*')) if p.is_file() and p.name!='FILE_HASHES.json'
+           and '.github' not in p.relative_to(OUTPUT).parts}
     (OUTPUT/'FILE_HASHES.json').write_text(json.dumps(files,ensure_ascii=False,indent=2)+'\n')
     print(f'Static game ready: {OUTPUT} ({len(files)} files)')
 

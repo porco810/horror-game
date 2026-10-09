@@ -25,7 +25,7 @@ def test_mobile(browser,errors,failures,record):
     mp.screenshot(path=str(OUTPUT/'mobile-title.png'));mp.locator('#start').tap()
     mp.wait_for_function('document.fullscreenElement !== null')
     assert mp.locator('#touch-fullscreen').inner_text()=='縮小'
-    mp.evaluate('window.kuchiGame.enemy.grace=999')
+    mp.evaluate("window.kuchiGame.actors.forEach((a,i)=>{a.enemy.grace=999;if(i){a.enemy.transition('idle',999);a.enemy.timer=999;}})")
     cdp=mobile.new_cdp_session(mp)
     def advance(t):mp.evaluate('(t)=>window.kuchiGame.advance(t)',t)
     def state():return mp.evaluate('window.kuchiGame.snapshot()')
@@ -184,7 +184,7 @@ def main():
             assert item in snapshot()['progress']['collected'],item
         def start():
             page.click('#start');assert snapshot()['mode']=='playing'
-            page.evaluate('window.kuchiGame.enemy.grace=999')
+            page.evaluate("window.kuchiGame.actors.forEach((a,i)=>{a.enemy.grace=999;if(i){a.enemy.transition('idle',999);a.enemy.timer=999;}})")
         def collect():
             take('note_village',1,31);take('bell',2.4,30.6);take('rice_start',3,30.6)
             take('photo',-10,10.8);take('note_diary',-10,11.3);take('seal_house',-11,9.1)
@@ -262,7 +262,7 @@ def main():
         page.reload(wait_until='networkidle');page.wait_for_function("document.body.dataset.ready==='true'",timeout=60000)
         page.click('#continue');assert snapshot()['progress']['inventory']['onigiri']==saved_inventory
         assert len(snapshot()['dropped'])==1;d=snapshot()['dropped'][0]
-        page.evaluate('window.kuchiGame.enemy.grace=999');teleport(d['x']+1,d['z']);aim(d['id']);page.keyboard.press('e')
+        page.evaluate("window.kuchiGame.actors.forEach((a,i)=>{a.enemy.grace=999;if(i){a.enemy.transition('idle',999);a.enemy.timer=999;}})");teleport(d['x']+1,d['z']);aim(d['id']);page.keyboard.press('e')
         assert not snapshot()['dropped'];assert snapshot()['progress']['inventory']['onigiri']==saved_inventory+1
         record('save/reload/dropped-item-recovery')
         # Audio initialized from an actual click; all three reaction groups use the GLB.
@@ -281,7 +281,7 @@ def main():
         teleport(0,2);page.evaluate("const e=window.kuchiGame.enemy;e.position={x:0,z:1.4};e.angle=0;e.grace=0;e.transition('chase')")
         step(.1);assert snapshot()['mode']=='dead'
         page.screenshot(path=str(OUTPUT/'caught.png'));page.click('#retry');assert snapshot()['mode']=='playing';assert len(snapshot()['progress']['seals'])==3
-        page.evaluate('window.kuchiGame.enemy.grace=999');record('alert/chase/occluded-search/catch/checkpoint-retry')
+        page.evaluate("window.kuchiGame.actors.forEach((a,i)=>{a.enemy.grace=999;if(i){a.enemy.transition('idle',999);a.enemy.timer=999;}})");record('alert/chase/occluded-search/catch/checkpoint-retry')
         # Pause prevents simulation, including reaction cooldown and enemy travel.
         page.keyboard.press('p');before=snapshot();step(5);assert snapshot()==before
         page.click('#resume');record('pause-freezes-world')
@@ -289,7 +289,7 @@ def main():
         page.screenshot(path=str(OUTPUT/'ending-normal.png'));record('altar/key/gate/normal-ending')
         # An independent full playthrough earns the three memories and final ending.
         page.click('#retry');assert snapshot()['progress']['seals']==[]
-        page.evaluate('window.kuchiGame.enemy.grace=999');collect()
+        page.evaluate("window.kuchiGame.actors.forEach((a,i)=>{a.enemy.grace=999;if(i){a.enemy.transition('idle',999);a.enemy.timer=999;}})");collect()
         for item,key in [('photograph',1),('hairpin',2),('child_sandals',3)]:throw(item,key,'lament')
         assert len(snapshot()['progress']['memories'])==3
         unlock();escape();assert page.locator('#end-title').inner_text()=='おかえり。'

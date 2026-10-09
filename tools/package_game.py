@@ -22,12 +22,18 @@ def main():
         files.extend(p for p in (ROOT/directory).iterdir() if p.is_file() and p.suffix in suffixes)
     for name in ['kuchikagura_game.blend','textures/kuchikagura_atlas_1k.png','build_report.json',
                  'build_report.txt','asset_validation.json','gltf_validation.json',
+                 'pursuer_glasses.blend','pursuer_cropped.blend',
+                 'textures/pursuer_glasses_atlas_2k.png','textures/pursuer_cropped_atlas_2k.png',
+                 'pursuer_glasses_report.json','pursuer_cropped_report.json',
+                 'reference_build_report.json','game-verification/pursuers_validation.json',
+                 'reference_asset_validation.json','reference_gltf_validation.json',
                  'game-verification/game_validation.json','game-verification/static_validation.json',
                  'verification/browser_validation.json','game-verification/title.png']:
         files.append(ROOT/'export'/name)
     files.extend(ROOT/'node_modules/three'/name for name in RUNTIME)
     files=sorted(set(files))
-    if any(not p.is_file() for p in files):raise SystemExit('Complete and validate the game before packaging.')
+    missing=[str(p.relative_to(ROOT)) for p in files if not p.is_file()]
+    if missing:raise SystemExit('Complete and validate the game before packaging. Missing: '+', '.join(missing))
     hashes={str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
     OUTPUT.parent.mkdir(exist_ok=True)
     with zipfile.ZipFile(OUTPUT,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=6) as archive:

@@ -19,4 +19,10 @@ set "RC=%ERRORLEVEL%"
 type "%CD%\build_log.txt"
 if not "%RC%"=="0" (echo ERROR: See build_log.txt and build_python_error.txt.&pause&exit /b %RC%)
 if not exist "%CD%\web\assets\models\kuchikagura.glb" (echo ERROR: GLB missing.&pause&exit /b 1)
+"%BLENDER%" --background --factory-startup --threads 4 --python-exit-code 1 --python "%CD%\blender\generate_reference_pursuers.py" > "%CD%\reference_build_log.txt" 2>&1
+set "RC=%ERRORLEVEL%"
+type "%CD%\reference_build_log.txt"
+if not "%RC%"=="0" (echo ERROR: See reference_build_log.txt and reference_build_python_error.txt.&pause&exit /b %RC%)
+if not exist "%CD%\web\assets\models\pursuer_glasses.glb" (echo ERROR: Glasses pursuer GLB missing.&pause&exit /b 1)
+if not exist "%CD%\web\assets\models\pursuer_cropped.glb" (echo ERROR: Cropped-hair pursuer GLB missing.&pause&exit /b 1)
 call PREVIEW_ONLY.bat

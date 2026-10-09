@@ -1,0 +1,56 @@
+{
+  "status": "passed",
+  "assets": {
+    "glasses": {
+      "asset": "pursuer_glasses",
+      "status": "passed",
+      "triangles": 34548,
+      "glb_bytes": 3579452,
+      "bones": 40,
+      "texture": "one embedded 2048x2048 PNG",
+      "animations": [
+        "idle",
+        "walk",
+        "alert",
+        "chase",
+        "search",
+        "lament",
+        "feed",
+        "ritual"
+      ],
+      "loop_seams": "passed",
+      "skin_weights": "passed",
+      "finite_attributes": "passed",
+      "report_consistency": "passed",
+      "blend_header": "passed",
+      "glb_sha256": "f1f2d88c9f3feda062f7fbe1cb393fc3744abad371072fb9db75941a90faa1b4",
+      "blend_sha256": "14c39639915fa7233134eff5d0583a2b38cd6ae88eac6678e645e5df23f8d60b"
+    },
+    "cropped": {
+      "asset": "pursuer_cropped",
+      "status": "passed",
+      "triangles": 33902,
+      "glb_bytes": 3560260,
+      "bones": 40,
+      "texture": "one embedded 2048x2048 PNG",
+      "animations": [
+        "idle",
+        "walk",
+        "alert",
+        "chase",
+        "search",
+        "lament",
+        "feed",
+        "ritual"
+      ],
+      "loop_seams": "passed",
+      "skin_weights": "passed",
+      "finite_attributes": "passed",
+      "report_consistency": "passed",
+      "blend_header": "passed",
+      "glb_sha256": "555150ad01f86f271490b3f5316efe16d69a8b529cc7456b7b08700dcbfd3f1a",
+      "blend_sha256": "af09eddff7cde54bea5077fe021a81008e65c80a100783a578b24e558aad2e86"
+    }
+  },
+  "both_reference_characters": true
+}

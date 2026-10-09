@@ -1,0 +1,73 @@
+{
+  "character": "短髪の追跡者",
+  "id": "cropped",
+  "blender_version": "4.3.2",
+  "triangles": 33902,
+  "skinned_meshes": 1,
+  "bones": 40,
+  "texture": {
+    "size": [
+      2048,
+      2048
+    ],
+    "count": 1,
+    "packed": true
+  },
+  "clips": [
+    {
+      "name": "idle",
+      "duration_seconds": 3.6,
+      "loop": true,
+      "in_place": true
+    },
+    {
+      "name": "walk",
+      "duration_seconds": 1.2,
+      "loop": true,
+      "in_place": true
+    },
+    {
+      "name": "alert",
+      "duration_seconds": 2.4,
+      "loop": false,
+      "in_place": true
+    },
+    {
+      "name": "chase",
+      "duration_seconds": 0.8,
+      "loop": true,
+      "in_place": true
+    },
+    {
+      "name": "search",
+      "duration_seconds": 4.8,
+      "loop": true,
+      "in_place": true
+    },
+    {
+      "name": "lament",
+      "duration_seconds": 7.2,
+      "loop": false,
+      "in_place": true
+    },
+    {
+      "name": "feed",
+      "duration_seconds": 5.2,
+      "loop": false,
+      "in_place": true
+    },
+    {
+      "name": "ritual",
+      "duration_seconds": 5.6,
+      "loop": true,
+      "in_place": true
+    }
+  ],
+  "glb_bytes": 3560260,
+  "forward_gltf": "+Z",
+  "units": "metres",
+  "height_target_metres": 1.78,
+  "player_model": false,
+  "pov_arms_asset": "separate pov_arms.glb, reserved for later",
+  "reference": "user-supplied portrait; unseen surfaces reconstructed; no personal labels"
+}

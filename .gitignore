@@ -6,6 +6,8 @@ __pycache__/
 *.blend2
 build_log.txt
 build_python_error.txt
+reference_build_log.txt
+reference_build_python_error.txt
 preview.log
 export/verification/
 export/game-verification/

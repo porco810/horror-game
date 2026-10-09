@@ -14,6 +14,15 @@ if [ ! -s export/kuchikagura_game.blend ] || [ ! -s web/assets/models/kuchikagur
     exit 1
   fi
 fi
+if [ ! -s export/pursuer_glasses.blend ] || [ ! -s export/pursuer_cropped.blend ] || \
+   [ ! -s web/assets/models/pursuer_glasses.glb ] || [ ! -s web/assets/models/pursuer_cropped.glb ]; then
+  if npm run build:references > reference_build_log.txt 2>&1; then
+    tail -n 8 reference_build_log.txt
+  else
+    tail -n 60 reference_build_log.txt
+    exit 1
+  fi
+fi
 npm run validate
 npm run test:logic
 npm run build:web

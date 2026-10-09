@@ -12,7 +12,9 @@
     "test:game": "python3 tools/smoke_game.py",
     "test:logic": "node --test tests/gameplay.test.mjs",
     "build:web": "python3 tools/build_web.py",
-    "test:static": "python3 tools/smoke_static.py"
+    "test:static": "python3 tools/smoke_static.py",
+    "build:references": "blender --background --factory-startup --threads 4 --python-exit-code 1 --python blender/generate_reference_pursuers.py",
+    "test:pursuers": "python3 tools/smoke_pursuers.py"
   },
   "dependencies": {
     "three": "0.180.0"

@@ -2,7 +2,9 @@
 
 日本の因習村を舞台にした、ブラウザで遊べる一人称探索ホラーです。
 村の屋敷・井戸・蔵で三枚の鎮め札を集め、北の社で境の鍵を受け取り、南の門から脱出します。
-オリジナルの女性型追跡怪異「朽ち神楽」、Blender編集用モデル、8種類の骨格アニメーションも含みます。
+提供写真の左の眼鏡の人物と右の短髪の人物を、それぞれ別の追跡キャラクターとして制作しています。
+本編では二体が独立して巡回・追跡します。旧作の女性型怪異「朽ち神楽」もモデルと確認画面に保持しています。
+三体それぞれのBlender編集用ファイル、GLB、8種類の骨格アニメーションを含みます。
 
 [ブラウザで遊ぶ](https://porco810.github.io/horror-game/) — スマートフォンは横向きで操作します。
 
@@ -12,7 +14,7 @@ Windowsでは `PLAY.bat` を実行します。既存の `PREVIEW_ONLY.bat` で�
 リポジトリから取得した場合、最初にNode.jsを用意して `npm ci` を実行してください。
 Linuxでは `npm ci` のあと `npm start` を実行します。標準ポートは8765です。
 HTTPサーバーが必要なので、`web/index.html` を直接ダブルクリックして開く方法には対応していません。
-ゲーム本編は `/`、元の8動作プレビューは `/character.html` です。
+ゲーム本編は `/`、三体を切り替えて8動作と細部を確認するプレビューは `/character.html` です。
 `npm run build:web` は依存ファイルを同梱した静的サイトを `dist/` に生成します。
 `dist/` はHTTPサーバーのルートでもサブディレクトリでも配信できます。
 
@@ -78,6 +80,13 @@ iPhoneなど全画面APIに対応しない環境では、共有・メニュー�
 
 ## 生成物
 
+- `export/pursuer_glasses.blend` / `web/assets/models/pursuer_glasses.glb` — 写真左の眼鏡・乱れた黒髪・顔立ちをモチーフにした追跡者。
+- `export/pursuer_cropped.blend` / `web/assets/models/pursuer_cropped.glb` — 写真右の短髪・丸みのある顔・がっしりした体格をモチーフにした別の追跡者。
+- `export/textures/pursuer_glasses_atlas_2k.png` / `pursuer_cropped_atlas_2k.png` — 二体それぞれの2048×2048アトラス。各GLBにも一枚ずつ埋め込み。
+- `export/pursuer_glasses_report.json` / `pursuer_cropped_report.json` — 二体の実際のtriangle数・容量・骨格・生成環境。
+- `export/reference_build_report.json` — 新二体をまとめた生成レポート。
+- `export/reference_asset_validation.json` / `reference_gltf_validation.json` — 新二体のバイナリ・スキン・アニメーション・glTF形式の検証。
+- `export/game-verification/pursuers_validation.json` — 二体を独立して動かす本編の追跡・反応のブラウザ検証。
 - `export/kuchikagura_game.blend` — 材質・1Kアトラス・骨格・8アクションを保持する編集用ファイル。
 - `web/assets/models/kuchikagura.glb` — 27,904 triangle、20ボーン、8アニメーション、埋め込みテクスチャ1枚。
 - `export/textures/kuchikagura_atlas_1k.png` — 1024×1024の衣装・髪・肌・植物アトラス。
@@ -85,6 +94,11 @@ iPhoneなど全画面APIに対応しない環境では、共有・メニュー�
 - `export/asset_validation.json` / `export/gltf_validation.json` — バイナリ・骨格・アニメーション・glTF形式の検証。
 
 生成物は再生成のためのキャッシュではなく、ゲームに取り込める納品物として残しています。
+新二体は眼鏡34,548／短髪33,902triangle、各40ボーン・8クリップ・約3.6MBのGLBです。白い半袖シャツ、緑のランヤード、濃紺のパンツを共通の衣装とします。
+既存の20ボーンに手指の20ボーンを加え、供物を拾う・見つめる・口に運ぶ動作で指も曲げます。
+顔・髪・眼鏡・襟・胸ポケット・肩章・ボタン・ベルトなどを分けて造形し、写真で見えない背面・脚・靴は創作で補完しています。
+写真は造形の参考とし、写真そのもの、実名の名札、実在組織のロゴはモデルやテクスチャに使用しません。
+写真に基づく単眼の手続き造形であり、スキャンによる本人の完全な再現ではありません。
 主人公モデルは含みません。POV用両腕は `pov_arms.glb` という独立アセットをカメラに追加する設計です。
 村マップは手続き生成したオリジナルの建物・石畳・杉林・灯籠・社で構成し、衝突判定と経路探索を持ちます。
 
@@ -97,12 +111,13 @@ Blender内のPythonにはモデル生成用のNumPyが付属しています。Py
 cd /workspace/horror-game
 npm ci --include=dev --ignore-scripts --no-audit --no-fund --cache /workspace/scratch/npm-cache
 npm run build
+npm run build:references
 npm run validate
 npm run test:logic
 npm run preview
 ```
 
-別ターミナルで `npm run test:game`（本編）と `npm run test:browser`（キャラクター確認）を実行できます。
+サーバー起動後、`npm run test:game`（本編）、`npm run test:pursuers`（二体の独立追跡・供物・指）、`npm run test:browser`（キャラクター確認）を順に実行できます。
 `npm run build:web` のあと `npm run test:static` で、別のHTTPサーバーのサブディレクトリでも読み込みと操作を確認できます。
 ブラウザ検証はPython Playwrightと `/usr/bin/chromium` を使います。このクラウドには両方が入っています。
 `KUCHI_GAME_URL=https://porco810.github.io/horror-game/ python3 tools/smoke_game.py --mobile-only` で公開版の携帯操作も検証できます。
@@ -113,7 +128,10 @@ Web表示に外部CDN、APIキー、認証情報は必要ありません。依�
 
 `PLAY.bat` または `PREVIEW_ONLY.bat` を実行すると、生成済みモデルを使ったゲーム本編が開きます。
 完成版ZIPにはWeb表示に必要なThree.jsの公式ファイルとライセンスも同梱しています。
-`BUILD_AND_PREVIEW.bat` はモデルを再生成してプレビューを開きます。
+`BUILD_AND_PREVIEW.bat` は三体のモデルを再生成して本編を開きます。
+旧怪異の再生成は `npm run build`、新二体だけの再生成は `npm run build:references` を使います。
+新二体は `blender/generate_reference_pursuers.py` が生成し、頭部・衣装を別のヘルパーで組み立てます。
+`npm run build:references` をWindowsで使う場合は、指定のBlenderのフォルダーをPATHへ追加してください。
 バッチはご指定の `C:\Program Files\Blender Foundation\Blender 5.2\blender.exe` を最初に探します。
 Gitリポジトリから取得した場合はNode.jsをインストールし、最初に `npm ci` を実行してください。
 
@@ -124,12 +142,13 @@ Gitリポジトリから取得した場合はNode.jsをインストールし、�
 ## ゲームへ組み込む
 
 WebページでThree.jsとadd-onsのimport mapを設定し、`character-controller.js` を読み込みます。
-このGLBはスキンメッシュと骨格を含むため、移動・回転は `controller.model` 全体に適用してください。
+三体のGLBは同じアニメーション名と骨格の契約を持ちます。読み込むURLを変えて同じコントローラーを使えます。
+GLBはスキンメッシュと骨格を含むため、移動・回転は `controller.model` 全体に適用してください。
 単位はメートル、上方向+Y、正面+Z。歩行・追跡はin-placeで、位置更新・ナビゲーション・衝突処理はゲーム側で行います。
 
 ```js
 import {KuchikaguraController} from './character-controller.js';
-const pursuer = await KuchikaguraController.load('./assets/models/kuchikagura.glb');
+const pursuer = await KuchikaguraController.load('./assets/models/pursuer_glasses.glb');
 scene.add(pursuer.model);
 pursuer.model.position.set(0, 0, -5);
 pursuer.play('walk');
@@ -146,10 +165,14 @@ pursuer.update(deltaSeconds);
 
 ## プレビューと検証
 
-8つの動作ボタン、6種類の投げる品物、停止・時刻指定・速度変更、霧・回転・照明切り替えを備えています。
+三体の選択、8つの動作ボタン、6種類の投げる品物、停止・時刻指定・速度変更、霧・回転・照明切り替えを備えています。
+新二体の顔・眼鏡・髪・衣装は、確認画面の細部用視点から確認できます。
 写真・食べ物・鈴の反応は実際のGLBの骨格アニメーションを再生します。
-`npm run validate` は三角形数、正規化されたウェイト、全クリップの実データ、ループ境界、1K埋め込み画像を検査し、
-Khronos glTF Validatorで形式を検証します。`npm run test:browser` は8動作の骨格変化・描画、6品目、再生操作、モバイル表示を検証します。
+`npm run validate` は三体の三角形数、全属性の有限値、頂点・ボーン参照、正規化されたウェイトと回転、
+全クリップの実データ、ループ境界、1K/2K埋め込み画像、生成レポートとの一致、Blenderヘッダを検査し、
+Khronos glTF Validatorで形式を検証します。
+`python3 tools/validate_asset.py --asset glasses cropped` と `node tools/validate_gltf.cjs --asset glasses cropped` で新二体だけも検査できます。
+`npm run test:browser` はモデルの切り替え、8動作の骨格変化・描画、6品目、再生操作、モバイル表示を検証します。
 スクリーンショットとブラウザ結果は `export/verification/` に保存します。
 
 `npm run test:logic` は移動の壁抜け防止、遮蔽・経路探索、追跡・捜索・反応、保存復元を検証します。
@@ -159,5 +182,6 @@ Khronos glTF Validatorで形式を検証します。`npm run test:browser` は8�
 通常ページのフレーム更新による入力も別に検査します。結果は `export/game-verification/game_validation.json` に保存します。
 音はWeb Audioによる独自の環境音・足音・鈴・鼓動です。自動検証は音の主観的な聞こえ方まで保証しません。
 
-材質・髪・衣装のディテールは手続き生成したオリジナルです。既存作品のキャラクターや外部画像は使っていません。
+材質・髪・衣装のディテールは手続き生成します。新二体は利用者提供の写真を造形のモチーフとし、旧怪異はオリジナルデザインです。
+既存作品のキャラクターや第三者の画像素材は使用していません。
 Three.jsとglTF Validatorのライセンスはそれぞれのnpmパッケージに従います。

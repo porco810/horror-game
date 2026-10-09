@@ -6,7 +6,16 @@
     "up": "+Y",
     "forward": "+Z",
     "motion": "in-place",
-    "clips": ["idle", "walk", "alert", "chase", "search", "lament", "feed", "ritual"]
+    "clips": [
+      "idle",
+      "walk",
+      "alert",
+      "chase",
+      "search",
+      "lament",
+      "feed",
+      "ritual"
+    ]
   },
   "povArms": {
     "included": false,
@@ -14,5 +23,47 @@
     "parent": "camera",
     "animationMixer": "separate",
     "sharesPursuerSkeleton": false
-  }
+  },
+  "characters": [
+    {
+      "id": "glasses",
+      "name": "眼鏡の追跡者",
+      "url": "pursuer_glasses.glb",
+      "units": "metres",
+      "up": "+Y",
+      "forward": "+Z",
+      "motion": "in-place",
+      "clips": [
+        "idle",
+        "walk",
+        "alert",
+        "chase",
+        "search",
+        "lament",
+        "feed",
+        "ritual"
+      ],
+      "role": "independent pursuer"
+    },
+    {
+      "id": "cropped",
+      "name": "短髪の追跡者",
+      "url": "pursuer_cropped.glb",
+      "units": "metres",
+      "up": "+Y",
+      "forward": "+Z",
+      "motion": "in-place",
+      "clips": [
+        "idle",
+        "walk",
+        "alert",
+        "chase",
+        "search",
+        "lament",
+        "feed",
+        "ritual"
+      ],
+      "role": "independent pursuer"
+    }
+  ]
 }
