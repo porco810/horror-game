@@ -11,7 +11,7 @@ export const ITEM_ORDER = Object.keys(ITEMS);
 export const SAVE_KEY = 'kuchi-kagura-game-v1';
 export const SPAWN = {x:0,z:31};
 export const ENEMY_SPAWN = {x:0,z:-20};
-export const PATROL = [{x:0,z:-19},{x:8,z:-8},{x:0,z:6},{x:-8,z:0},{x:0,z:-8}];
+export const PATROL = [{x:0,z:-19},{x:5,z:-8},{x:0,z:6},{x:-8,z:0},{x:0,z:-8}];
 export const SEALS = ['seal_house','seal_well','seal_store'];
 export const NOTES = {
   village: {title:'境の置き手紙', place:'村の入口', text:'日が落ちたら、この村で名を呼ぶな。\n屋敷、井戸、蔵にある三枚の鎮め札を社へ返せ。そうすれば、境の門は開く。\n\n走る足音と灯りを、あれは覚える。家の陰へ回り、灯りを消し、息を潜めよ。'},
@@ -95,11 +95,12 @@ export class VillageNavigation {
   }
 }
 export class PursuerAI {
-  constructor(nav,{difficulty='normal',onState=()=>{},onCatch=()=>{},onMemory=()=>{}}={}){
+  constructor(nav,{difficulty='normal',onState=()=>{},onCatch=()=>{},onMemory=()=>{},spawn=ENEMY_SPAWN,patrol=PATROL,initialGrace=7}={}){
     this.nav=nav;this.onState=onState;this.onCatch=onCatch;this.onMemory=onMemory;this.difficulty=difficulty;
+    this.spawn={...spawn};this.patrol=patrol.map(p=>({...p}));this.initialGrace=initialGrace;
     this.reset();
   }
-  reset(){this.position={...ENEMY_SPAWN};this.angle=Math.PI;this.state=null;this.timer=0;this.path=[];this.pathTimer=0;this.patrolIndex=0;this.lastSeen={...SPAWN};this.lost=0;this.grace=7;this.reactionItem=null;this.transition('idle',1.5);}
+  reset(){this.position={...this.spawn};this.angle=Math.PI;this.state=null;this.timer=0;this.path=[];this.pathTimer=0;this.patrolIndex=0;this.lastSeen={...SPAWN};this.lost=0;this.grace=this.initialGrace;this.reactionItem=null;this.transition('idle',1.5);}
   transition(state,timer=0){if(this.state===state)return;this.state=state;this.timer=timer;this.path=[];this.pathTimer=0;this.onState(state);}
   hears(position,loudness=1){
     if(this.grace>0||['lament','feed','ritual','chase'].includes(this.state))return;
@@ -144,8 +145,8 @@ export class PursuerAI {
     }else if(this.state==='idle'){
       if(this.timer<=0)this.transition('walk');
     }else if(this.state==='walk'){
-      const target=PATROL[this.patrolIndex];this.walkTo(target,1.0,dt);
-      if(distance(this.position,target)<.8){this.patrolIndex=(this.patrolIndex+1)%PATROL.length;this.transition('idle',1.7);}
+      const target=this.patrol[this.patrolIndex];this.walkTo(target,1.0,dt);
+      if(distance(this.position,target)<.8){this.patrolIndex=(this.patrolIndex+1)%this.patrol.length;this.transition('idle',1.7);}
     }
     if(this.grace===0&&this.state==='chase'&&d<1.0&&clear)this.onCatch();
   }

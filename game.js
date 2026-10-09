@@ -3,7 +3,7 @@ import {KuchikaguraController} from './character-controller.js';
 import {createVillage,makeOffering} from './world.js';
 import {VillageAudio} from './audio.js';
 import {attachTouchPad} from './touch-pad.js';
-import {ITEMS,ITEM_ORDER,NOTES,SEALS,SAVE_KEY,SPAWN,freshProgress,parseProgress,VillageNavigation,PursuerAI,clamp,distance} from './gameplay.js';
+import {ITEMS,ITEM_ORDER,NOTES,SEALS,SAVE_KEY,SPAWN,PATROL,freshProgress,parseProgress,VillageNavigation,PursuerAI,clamp,distance} from './gameplay.js?v=portrait-1';
 
 const $=s=>document.querySelector(s),canvas=$('#game-canvas');
 const testMode=new URLSearchParams(location.search).get('test')==='1';
@@ -12,24 +12,25 @@ const coarsePointer=matchMedia('(pointer:coarse)'),portraitScreen=matchMedia('(o
 let orientationBlocked=coarsePointer.matches&&portraitScreen.matches,resetPads=()=>{},fullscreenPending=false;
 let mode='title',started=false,settingsReturn='title',journalReturn='playing',ready=false;
 let progress=freshProgress(),savedInMemory=null,selected='kagura_bell',stamina=1,exhausted=false,bellCooldown=0;
-let subtitleUntil=0,toastUntil=0,time=0,renderTime=0,focused=null,lastState='',projectiles=[],dropped=[];
+let subtitleUntil=0,toastUntil=0,time=0,renderTime=0,focused=null,projectiles=[],dropped=[];
 const player={...SPAWN,yaw:0,pitch:0,flashlight:true,running:false,crouching:false,moving:false};
 const audio=new VillageAudio();
 let settings={difficulty:'normal',brightness:1.25,volume:.55,sensitivity:1,reduceMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,quality:matchMedia('(pointer:coarse)').matches?'low':'standard'};
 try{const s=JSON.parse(localStorage.getItem('kuchi-kagura-settings-v1'));if(s){for(const k of ['brightness','volume','sensitivity'])if(Number.isFinite(s[k]))settings[k]=clamp(s[k],k==='volume'?0:.5,k==='volume'?1:2);if(['normal','gentle'].includes(s.difficulty))settings.difficulty=s.difficulty;if(['standard','low'].includes(s.quality))settings.quality=s.quality;if(typeof s.reduceMotion==='boolean')settings.reduceMotion=s.reduceMotion;}}catch{}
 let renderer,scene,camera,world,nav,controller,enemy,flashlight,moon;
-let reactionProp=null;
-function setReactionProp(item){
-  if(reactionProp){reactionProp.removeFromParent();reactionProp=null;}
+const actors=[];
+function setReactionProp(item,actor=actors[0]){
+  if(!actor)return;
+  if(actor.reactionProp){actor.reactionProp.removeFromParent();actor.reactionProp=null;}
   if(!item)return;
-  reactionProp=makeOffering(item);reactionProp.userData.bone=ITEMS[item].kind==='memory'?'MEMORY_PROP_CTRL':ITEMS[item].kind==='food'?'FOOD_PROP_CTRL':'BELL_PROP_CTRL';
-  reactionProp.scale.setScalar(.7);reactionProp.visible=false;scene.add(reactionProp);
+  const prop=makeOffering(item);prop.userData.bone=ITEMS[item].kind==='memory'?'MEMORY_PROP_CTRL':ITEMS[item].kind==='food'?'FOOD_PROP_CTRL':'BELL_PROP_CTRL';
+  prop.scale.setScalar(.7);prop.visible=false;scene.add(prop);actor.reactionProp=prop;
 }
-function updateReactionProp(){
-  if(!reactionProp)return;controller.model.updateMatrixWorld(true);
-  const name=reactionProp.userData.bone,bone=controller.model.getObjectByName(name);
-  bone.getWorldPosition(reactionProp.position);bone.getWorldQuaternion(reactionProp.quaternion);
-  reactionProp.visible=(controller.propScales?.[name]??0)>.1;
+function updateReactionProp(actor){
+  const prop=actor.reactionProp;if(!prop)return;actor.controller.model.updateMatrixWorld(true);
+  const name=prop.userData.bone,bone=actor.controller.model.getObjectByName(name);
+  bone.getWorldPosition(prop.position);bone.getWorldQuaternion(prop.quaternion);
+  prop.visible=(actor.controller.propScales?.[name]??0)>.1;
 }
 function showError(error){ready=false;setMode('error');$('#error-message').textContent=error.message;console.error(error);}
 function setMode(next){
@@ -93,8 +94,8 @@ function begin(continuing=false,lock=true){
   started=true;stamina=1;exhausted=false;bellCooldown=0;time=progress.elapsed;touch.running=touch.crouching=false;
   audio.resetClock();
   refreshTouch();$('#torch-toggle').setAttribute('aria-pressed','true');
-  clearProjectiles();setReactionProp(null);for(const d of progress.dropped)addDropped(d);
-  enemy.reset();controller.play('idle',{fade:0});selected=progress.inventory.kagura_bell?'kagura_bell':ITEM_ORDER.find(k=>progress.inventory[k])||'kagura_bell';
+  clearProjectiles();for(const actor of actors){setReactionProp(null,actor);actor.enemy.reset();actor.controller.play('idle',{fade:0});actor.lastState='';}for(const d of progress.dropped)addDropped(d);
+  selected=progress.inventory.kagura_bell?'kagura_bell':ITEM_ORDER.find(k=>progress.inventory[k])||'kagura_bell';
   synchronizeEntities();refreshHUD();setMode('playing');updateCamera(0);save();
   subtitle(continuing?'灯りは、まだ消えていない。':'南の門は閉ざされている。入口の置き手紙を読もう。',7);
   audio.start().catch(()=>toast('音を再生できませんでした。設定から音量を確認してください。'));
@@ -204,8 +205,9 @@ function ring(){
   if(!progress.inventory.kagura_bell){toast('神楽鈴を持っていない。入口の供物台を探そう。');return;}
   if(bellCooldown>0){toast(`鈴の余韻が残っている。あと ${Math.ceil(bellCooldown)} 秒。`,2);return;}
   bellCooldown=12;audio.bell();
-  if(enemy.offer('kagura_bell',player))subtitle('鈴の音に、あれは舞い始めた。今のうちに離れよう。',5);
-  else{enemy.hears(player,2);subtitle('霧の奥へ、鈴の音が沈んでいく。',3);}
+  let heard=false;for(const actor of actors){if(actor.enemy.offer('kagura_bell',player))heard=true;else actor.enemy.hears(player,2);}
+  if(heard)subtitle('鈴の音に、追うものが舞い始めた。今のうちに離れよう。',5);
+  else subtitle('霧の奥へ、鈴の音が沈んでいく。',3);
   refreshHUD();
 }
 function offer(){
@@ -227,13 +229,14 @@ function tickProjectiles(dt){
     if(!nav.free(p.object.position,0)||!nav.lineClear(previous,p.object.position,0,p.object.position.y)){p.object.position.x=previous.x;p.object.position.z=previous.z;p.velocity.x=p.velocity.z=0;}
     if(p.object.position.y<=.1||p.age>2){
       const pos={x:p.object.position.x,z:p.object.position.z};
-      if(enemy.offer(p.item,pos)){
+      const recipient=[...actors].sort((a,b)=>distance(a.enemy.position,pos)-distance(b.enemy.position,pos)).find(actor=>actor.enemy.offer(p.item,pos));
+      if(recipient){
         progress.dropped=progress.dropped.filter(d=>d.id!==p.id);
         p.object.removeFromParent();
         if(ITEMS[p.item].kind==='memory'&&!progress.memories.includes(p.item))progress.memories.push(p.item);
         subtitle(ITEMS[p.item].kind==='memory'?'拾い上げた記憶を見つめ、あれはしゃがみ込んだ。':'空腹が、追うことを忘れさせた。',4);save();
       }else{
-        const data={id:p.id,item:p.item,...pos};progress.dropped=progress.dropped.map(d=>d.id===p.id?data:d);addDropped(data,p.object);toast('品物は地面に残っている。Eで拾い直せる。');save();enemy.hears(pos,.65);
+        const data={id:p.id,item:p.item,...pos};progress.dropped=progress.dropped.map(d=>d.id===p.id?data:d);addDropped(data,p.object);toast('品物は地面に残っている。Eで拾い直せる。');save();for(const actor of actors)actor.enemy.hears(pos,.65);
       }
       projectiles=projectiles.filter(x=>x!==p);
     }
@@ -283,22 +286,28 @@ function simulate(dt){
   stamina=clamp(stamina+dt*(player.running?-.17:player.crouching?.13:.105),0,1);if(stamina<=.02)exhausted=true;if(stamina>.28)exhausted=false;
   const speed=player.crouching?1.45:player.running?4.8:2.7;
   nav.move(player,(Math.cos(player.yaw)*side-Math.sin(player.yaw)*forward)*speed*dt,(-Math.sin(player.yaw)*side-Math.cos(player.yaw)*forward)*speed*dt);
-  updateCamera(dt);tickProjectiles(dt);enemy.update(dt,player);controller.update(dt);
-  controller.model.position.set(enemy.position.x,0,enemy.position.z);
-  controller.model.rotation.y=THREE.MathUtils.lerp(controller.model.rotation.y,controller.model.rotation.y+Math.atan2(Math.sin(enemy.angle-controller.model.rotation.y),Math.cos(enemy.angle-controller.model.rotation.y)),1-Math.exp(-dt*7));
-  updateReactionProp();
+  updateCamera(dt);tickProjectiles(dt);
+  for(const actor of actors){
+    if(mode!=='playing')break;
+    const e=actor.enemy,c=actor.controller;e.update(dt,player);c.update(dt);
+    c.model.position.set(e.position.x,0,e.position.z);
+    c.model.rotation.y+=Math.atan2(Math.sin(e.angle-c.model.rotation.y),Math.cos(e.angle-c.model.rotation.y))*(1-Math.exp(-dt*7));
+    updateReactionProp(actor);
+  }
   findFocus();$('#stamina-fill').style.width=stamina*100+'%';$('#posture').textContent=player.crouching?'息をひそめる':player.running?'走る':exhausted?'息を整える':'歩く';
   $('#heading').textContent=['北','西','南','東'][((Math.round(player.yaw/(Math.PI/2))%4)+4)%4];
   $('#location').textContent=player.z>22?'境の門':player.z<-19?'山の社':player.x<-5&&player.z>4?'旧家':player.x>5&&player.z>9?'炊事小屋':player.x<-5&&player.z<-3?'井戸':player.x>5&&player.z<-3?'穀蔵':'村の小径';
   if(subtitleUntil<time)$('#subtitle').textContent='';if(toastUntil<time)$('#toast').textContent='';
-  const d=distance(enemy.position,player);$('#danger-shade').style.opacity=enemy.state==='chase'?clamp(1-d/18,.08,.55):0;
+  const nearest=actors.reduce((a,b)=>distance(a.enemy.position,player)<distance(b.enemy.position,player)?a:b);
+  const threat=actors.filter(a=>a.enemy.state==='chase').sort((a,b)=>distance(a.enemy.position,player)-distance(b.enemy.position,player))[0];
+  const audible=(threat||nearest).enemy,d=distance(audible.position,player);$('#danger-shade').style.opacity=threat?clamp(1-d/18,.08,.55):0;
   refreshSelected();
-  const rightX=Math.cos(player.yaw),rightZ=-Math.sin(player.yaw),pan=((enemy.position.x-player.x)*rightX+(enemy.position.z-player.z)*rightZ)/Math.max(1,d);
-  audio.update({running:player.running,moving:player.moving,crouching:player.crouching,enemyDistance:d,enemyPan:pan,state:enemy.state,time});
+  const rightX=Math.cos(player.yaw),rightZ=-Math.sin(player.yaw),pan=((audible.position.x-player.x)*rightX+(audible.position.z-player.z)*rightZ)/Math.max(1,d);
+  audio.update({running:player.running,moving:player.moving,crouching:player.crouching,enemyDistance:d,enemyPan:pan,state:audible.state,time});
 }
 function applySettings(){
   if(!renderer)return;renderer.toneMappingExposure=settings.brightness;renderer.setPixelRatio(Math.min(devicePixelRatio,settings.quality==='low'?1:1.5));renderer.shadowMap.enabled=settings.quality!=='low';
-  audio.setVolume(settings.volume);if(enemy)enemy.difficulty=settings.difficulty;
+  audio.setVolume(settings.volume);for(const actor of actors)actor.enemy.difficulty=settings.difficulty;
 }
 function wireUI(){
   for(const id of ['inventory','mobile-inventory'])ITEM_ORDER.forEach((item,index)=>{const b=document.createElement('button');b.dataset.item=item;b.innerHTML=`<kbd>${index+1}</kbd><span class="item-glyph">${ITEMS[item].glyph}</span><span class="item-name">${id==='inventory'?ITEMS[item].short:ITEMS[item].name}</span><span class="item-count">—</span>`;b.addEventListener('click',()=>{selected=item;refreshHUD();if(mode==='inventory')resume();});$('#'+id).append(b);});
@@ -373,24 +382,34 @@ async function boot(){
     scene.add(new THREE.HemisphereLight(0xa2bfc0,0x434631,1.35));moon=new THREE.DirectionalLight(0xb9ced0,2.7);moon.position.set(-24,42,-35);moon.castShadow=true;moon.shadow.mapSize.set(1024,1024);Object.assign(moon.shadow.camera,{left:-32,right:32,top:32,bottom:-32,near:.5,far:100});moon.shadow.normalBias=.035;scene.add(moon);
     flashlight=new THREE.SpotLight(0xffefc4,42,22,.39,.65,1.4);flashlight.position.set(.18,-.12,0);flashlight.target.position.set(.05,-.08,-8);camera.add(flashlight,flashlight.target);
     world=createVillage(scene);nav=new VillageNavigation(world.obstacles);wireUI();wireInput();applySettings();
-    controller=await KuchikaguraController.load();controller.showReactionProps=false;controller.model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});scene.add(controller.model);
-    enemy=new PursuerAI(nav,{difficulty:settings.difficulty,onState:state=>{
-      controller.play(state);setReactionProp(['lament','feed','ritual'].includes(state)?enemy?.reactionItem:null);
-      if(mode==='playing'&&state==='chase')subtitle('足音が、こちらへ近づいてくる。',3);
-      else if(mode==='playing'&&state==='search'&&lastState==='chase')subtitle('追う足音が止まった。灯りを消し、身を隠そう。',4);lastState=state;
-    },onCatch:()=>finish(false),onMemory:()=>{toast(`手向けた思い出 — ${progress.memories.length} / 3`);save();}});
-    controller.model.position.set(0,0,-19);
+    const profiles=[
+      {id:'glasses',spawn:{x:0,z:-20},patrol:PATROL,initialGrace:7},
+      {id:'cropped',spawn:{x:5,z:-8},patrol:[...PATROL.slice(1),PATROL[0]].reverse(),initialGrace:10},
+    ];
+    for(const profile of profiles){
+      const c=await KuchikaguraController.load(`./assets/models/pursuer_${profile.id}.glb?v=portrait-1`);
+      const actor={id:profile.id,controller:c,enemy:null,reactionProp:null,lastState:''};
+      c.showReactionProps=false;c.model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});scene.add(c.model);
+      actor.enemy=new PursuerAI(nav,{...profile,difficulty:settings.difficulty,onState:state=>{
+        c.play(state);setReactionProp(['lament','feed','ritual'].includes(state)?actor.enemy?.reactionItem:null,actor);
+        if(mode==='playing'&&state==='chase')subtitle('足音が、こちらへ近づいてくる。',3);
+        else if(mode==='playing'&&state==='search'&&actor.lastState==='chase')subtitle('追う足音が止まった。灯りを消し、身を隠そう。',4);actor.lastState=state;
+      },onCatch:()=>finish(false),onMemory:()=>{toast(`手向けた思い出 — ${progress.memories.length} / 3`);save();}});
+      c.model.position.set(profile.spawn.x,0,profile.spawn.z);c.model.rotation.y=Math.PI;actors.push(actor);
+    }
+    // Keep the original diagnostic aliases while exposing both independent rigs.
+    ({controller,enemy}=actors[0]);
     ready=true;document.body.dataset.ready='true';$('#start').disabled=false;$('#loading-status').textContent='探索の目安 10〜15分 · 自動保存';updateContinue();refreshHUD();
     addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);updateOrientation();});
     const clock=new THREE.Clock();
     renderer.setAnimationLoop(()=>{
       const dt=Math.min(clock.getDelta(),.05);renderTime+=dt;
       if(mode==='playing'){if(!testMode)simulate(dt);}
-      else if(mode==='title'||mode==='settings'&&!started){camera.position.set(5.5,2.3,26);camera.lookAt(-1+Math.sin(renderTime*.06)*.4,1.8,-8);flashlight.visible=false;controller.update(dt);}
+      else if(mode==='title'||mode==='settings'&&!started){camera.position.set(5.5,2.3,26);camera.lookAt(-1+Math.sin(renderTime*.06)*.4,1.8,-8);flashlight.visible=false;for(const actor of actors)actor.controller.update(dt);}
       world.update(renderTime);renderer.render(scene,camera);
     });
-    if(testMode)window.kuchiGame={get mode(){return mode;},player,enemy,nav,world,controller,renderer,camera,audio,
-      snapshot:()=>structuredClone({mode,progress,player,enemy:{state:enemy.state,position:enemy.position,timer:enemy.timer},stamina,bellCooldown,focused:focused?.id,projectiles:projectiles.length,dropped:dropped.map(d=>({id:d.id,item:d.item,x:d.x,z:d.z}))}),
+    if(testMode)window.kuchiGame={get mode(){return mode;},player,enemy,actors,nav,world,controller,renderer,camera,audio,
+      snapshot:()=>structuredClone({mode,progress,player,enemy:{state:enemy.state,position:enemy.position,timer:enemy.timer},enemies:actors.map(a=>({id:a.id,state:a.enemy.state,position:a.enemy.position,timer:a.enemy.timer})),stamina,bellCooldown,focused:focused?.id,projectiles:projectiles.length,dropped:dropped.map(d=>({id:d.id,item:d.item,x:d.x,z:d.z}))}),
       advance(seconds){for(let t=0;t<seconds;t+=.05)simulate(Math.min(.05,seconds-t));renderer.render(scene,camera);},
       teleport(x,z,yaw=0,pitch=0){if(!nav.free({x,z}))throw new Error('Test position intersects scenery');Object.assign(player,{x,z,yaw,pitch});updateCamera(0);findFocus();},
       aim(id){const e=[...world.entities,...dropped].find(e=>e.id===id);if(!e)throw new Error('Unknown target '+id);player.yaw=Math.atan2(-(e.x-player.x),-(e.z-player.z));player.pitch=Math.atan2(e.y+.12-camera.position.y,distance(e,player));updateCamera(0);findFocus();},
